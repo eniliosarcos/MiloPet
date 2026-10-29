@@ -122,9 +122,23 @@ Esa misma contrapartida obliga a que el agarre **no cubra la cara**. Los ojos
 necesitan el `mousemove` para saber dónde está el cursor; con el agarre encima,
 Milo solo reaccionaba desde el borde de la ventana, que es donde nadie pone el
 ratón para mirarlo. El agarre ocupa el torso, por debajo de la línea de los ojos:
-se arrastra desde la barriga y la cara queda viva. Si algún día se quiere
-arrastrar desde cualquier punto, hay que abandonar la región nativa e
-implementar el arrastre por IPC con `screen.getCursorScreenPoint()`.
+se arrastra desde la barriga y la cara queda viva.
+
+**Alternativa aparcada, no descartada.** Con la ventana funcionando se decidió no
+pagar el cambio, pero si algún día molesta la franja muerta o se quiere arrastrar
+desde cualquier punto, el camino es abandonar la región nativa y mover la ventana
+por IPC con `screen.getCursorScreenPoint()`. Tres trampas que el sistema operativo
+resolvía gratis y habría que reimplementar: las coordenadas deben ser de pantalla
+(`clientX` es relativo a una ventana que se está moviendo, así que se realimenta y
+tiembla); con escalado de Windows distinto del 100 % hay que aplicar el
+`scaleFactor` del display, porque `setPosition` trabaja en píxeles físicos; y un
+`pointerup` perdido —cursor fuera de la ventana, `Alt+Tab` a media pulsación— deja
+el arrastre pegado, así que pide captura de puntero, `blur` y un tiempo máximo.
+
+La regla para decidir no es "IPC sí o no", sino dónde está la frontera: el
+renderer dibuja y el main toca el sistema. Se cruza para lo que el renderer no
+puede hacer —mover la ventana, atajos globales, posición del cursor en pantalla—,
+no para centralizar lógica que ya vive bien en el renderer.
 
 La caja interactiva (`.hotspot`) debe medir **lo mismo que el agarre más el
 anillo** (hoy 115×71 px, con el agarre inscrito a 14 px), porque es la que pinta
