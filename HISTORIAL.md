@@ -8,6 +8,14 @@ Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 
 ## Historial
 
+### 2026-10-29 — Voz a texto con Groq y ajustes para la clave · feat
+
+**Qué:** `thinking` deja de ser un temporizador: el PCM de la frase viaja por IPC, el main lo convierte en WAV y lo manda a Groq (`whisper-large-v3-turbo`, `es`), y la burbuja enseña lo transcrito. Estrena la ventana de ajustes (`?settings=1`, otro componente raíz) para que cada usuario ponga su clave, cifrada con `safeStorage`.
+**Por qué:** una clave dentro del instalador la paga y la extrae cualquiera; BYOK es lo único que permite distribuir Milo sin backend propio.
+**Tocó:** `src/shared/ipc.ts`, `src/shared/audio.ts` y su spec, `electron/stt/transcriber.ts`, `electron/secrets.ts`, `electron/settings.ts`, `electron/main.ts`, `preload.ts`, `window.ts`, `src/app/core/{interaction,stt}`, `features/settings/`, `app.ts`, `app.html`, `main.ts`, `tsconfig.electron.json`, `docs/`.
+**Aprendido:** `bootstrapApplication` engancha al elemento que coincide con el selector: sin `<app-settings>` en el DOM la ventana arranca vacía y sin un solo error. `safeStorage.isEncryptionAvailable` está obsoleto en Electron 45; la API buena es `isAsyncEncryptionAvailable` + `encryptStringAsync`.
+**Commits:** `9deb1d3`
+
 ### 2026-10-29 — Oídos reales: micrófono y VAD · feat
 
 **Qué:** El bucle de interacción sale de `app.ts` a `core/interaction/`, y `listening` deja de ser un `setTimeout(1500)`: abre el micrófono con `getUserMedia`, calibra el ruido de fondo 300 ms y cierra la frase por energía. Sin voz vuelve a `idle` sin mensaje.

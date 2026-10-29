@@ -14,13 +14,13 @@ de todo lo que requiere permisos. **El renderer nunca toca Node.**
 
 ## Estado actual: fase 2 de 5
 
-| Fase | Qué añade                                               | Estado          |
-| ---- | ------------------------------------------------------- | --------------- |
-| 1    | Ventana + atajo global + máquina de estados + personaje | ✅ hecho        |
-| 2    | Micrófono, VAD, transcripción (STT)                     | 🟡 falta el STT |
-| 3    | Cerebro (LLM) + router de intención                     | pendiente       |
-| 4    | Acciones reales con lista blanca                        | pendiente       |
-| 5    | Contexto (ventana activa, resumen de pantalla)          | pendiente       |
+| Fase | Qué añade                                               | Estado    |
+| ---- | ------------------------------------------------------- | --------- |
+| 1    | Ventana + atajo global + máquina de estados + personaje | ✅ hecho  |
+| 2    | Micrófono, VAD, transcripción (STT)                     | ✅ hecho  |
+| 3    | Cerebro (LLM) + router de intención                     | pendiente |
+| 4    | Acciones reales con lista blanca                        | pendiente |
+| 5    | Contexto (ventana activa, resumen de pantalla)          | pendiente |
 
 ## El flujo completo hoy
 
@@ -49,19 +49,23 @@ métodos que `preload.ts` decidió publicar.
 
 ### Proceso main (privilegiado)
 
-| Archivo               | Responsabilidad                                                                  |
-| --------------------- | -------------------------------------------------------------------------------- |
-| `electron/main.ts`    | Ciclo de vida, instancia única, registro de handlers IPC.                        |
-| `electron/window.ts`  | Crea la ventana; posición guardada, transparencia, always-on-top, click-through. |
-| `electron/hotkey.ts`  | Registra el atajo global; informa si otro programa ya lo tiene.                  |
-| `electron/config.ts`  | Lee/escribe `config.json` en `app.getPath('userData')`.                          |
-| `electron/preload.ts` | Puente. Traduce métodos del `MiloBridge` a mensajes IPC concretos.               |
+| Archivo                | Responsabilidad                                                                  |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| `electron/main.ts`     | Ciclo de vida, instancia única, registro de handlers IPC.                        |
+| `electron/window.ts`   | Crea la ventana; posición guardada, transparencia, always-on-top, click-through. |
+| `electron/settings.ts` | La ventana de ajustes: misma build, query distinta.                              |
+| `electron/hotkey.ts`   | Registra el atajo global; informa si otro programa ya lo tiene.                  |
+| `electron/config.ts`   | Lee/escribe `config.json` en `app.getPath('userData')`.                          |
+| `electron/secrets.ts`  | Claves cifradas con `safeStorage`. Nunca en `config.json`.                       |
+| `electron/stt/`        | Voz a texto: interfaz `Transcriber` + implementación de Groq.                    |
+| `electron/preload.ts`  | Puente. Traduce métodos del `MiloBridge` a mensajes IPC concretos.               |
 
 ### Contrato compartido
 
-| Archivo             | Responsabilidad                                         |
-| ------------------- | ------------------------------------------------------- |
-| `src/shared/ipc.ts` | Nombres de canales y tipos. **Fuente única de verdad.** |
+| Archivo               | Responsabilidad                                             |
+| --------------------- | ----------------------------------------------------------- |
+| `src/shared/ipc.ts`   | Nombres de canales y tipos. **Fuente única de verdad.**     |
+| `src/shared/audio.ts` | WAV y remuestreo: puro, sin Electron, probado con el resto. |
 
 ### Renderer (Angular)
 
@@ -70,12 +74,14 @@ métodos que `preload.ts` decidió publicar.
 | `src/app/app.ts`                          | La ventana: arrastre por IPC, click-through y modo dev de zonas.                 |
 | `src/app/core/interaction/interaction.ts` | El bucle: atajo → escuchar → pensar → responder, y el ciclo de vida del mensaje. |
 | `src/app/core/audio/vad.ts`               | Máquina de tiempos del VAD, sin Web Audio ni timers: se prueba con números.      |
-| `src/app/core/audio/capture.ts`           | Micrófono real: `getUserMedia` + `AnalyserNode` + calibración del ruido.         |
+| `src/app/core/audio/capture.ts`           | Micrófono real: `getUserMedia` + `AnalyserNode` + calibración + PCM.             |
+| `src/app/core/stt/failure.ts`             | Los fallos de transcripción dichos en la burbuja y en los ajustes.               |
+| `src/app/features/settings/`              | La pantalla donde cada usuario pone su clave.                                    |
 | `src/app/core/milo/milo-bridge.ts`        | Token `MILO`; si no hay Electron, devuelve un sustituto que funciona en Chrome.  |
 | `src/app/features/mascot/`                | El cuerpo: SVG + estados + animaciones + mirada que sigue al cursor.             |
 | `src/app/features/bubble/`                | La burbuja de texto.                                                             |
 
-## Las nueve decisiones que no son obvias
+## Las diez decisiones que no son obvias
 
 Cada una existe por un bug concreto que ya nos costó tiempo.
 
@@ -266,18 +272,40 @@ Dos trampas de esta ronda:
 false` por el mismo motivo.
 - **Nada de `AudioWorklet` por ahora.** `index.html` no declara `worker-src`, así
   que un worklet creado desde `blob:` choca con `default-src 'self' file:`. Con
-  `AnalyserNode` cada 50 ms sobra para decidir cuándo hablas.
+  `AnalyserNode` cada 50 ms sobra para decidir cuándo hablas. El audio se recoge
+  con un `ScriptProcessorNode` conectado a una ganancia a cero: está marcado como
+  obsoleto, pero sigue vivo, no añade archivos y entrega bloques medidos (9
+  bloques de 4096 muestras en 800 ms en la ventana empaquetada).
+
+**10. La clave de voz la pone cada usuario, no la app.**
+Una clave metida en el instalador la puede sacar cualquiera que descomprima el
+binario, y entonces una persona paga las frases de todo el mundo. Milo es BYOK:
+cada usuario crea su clave en la consola de Groq (gratis) y la pega en la primera
+pantalla de ajustes del proyecto. Se cifra con `safeStorage` en
+`userData/secrets/` y el renderer nunca la recibe de vuelta: solo sabe si está
+puesta.
+
+El precio es una configuración obligatoria antes de la primera frase y el aviso
+correspondiente en la burbuja. La alternativa era un backend propio que pagase
+las llamadas: factura, cuotas y abuso incluidos. Queda descartado mientras Milo
+sea un proyecto personal.
+
+`setSttKey` valida contra la API antes de guardar (`GET /models`): una clave mal
+pegada se descubre en ese momento y no a la tercera frase. Y si el sistema no
+puede cifrar, no se guarda nada: un archivo en claro es peor que volver a
+pedirla.
 
 ## Qué está simulado (no confundir con real)
 
-| Parece               | Realidad                                                                         |
-| -------------------- | -------------------------------------------------------------------------------- |
-| Milo "escucha"       | Real a medias: `getUserMedia` y VAD de verdad. No guarda audio ni lo transcribe. |
-| Milo "piensa"        | `setTimeout(900)` en `core/interaction/interaction.ts`. No hay LLM.              |
-| Milo "responde"      | Texto fijo en el código.                                                         |
-| Ajustes persistentes | Sí es real: `config.json` en `userData`.                                         |
-| Milo se arrastra     | Sí es real: el renderer avisa y el main mueve la ventana.                        |
-| Milo recuerda dónde  | Sí es real: `position` en `config.json`, validada al arrancar.                   |
+| Parece               | Realidad                                                                        |
+| -------------------- | ------------------------------------------------------------------------------- |
+| Milo "escucha"       | Real: `getUserMedia` + VAD + Groq. El audio de la frase sale a Groq, nada más.  |
+| Milo "piensa"        | No hay LLM. `thinking` es la latencia real de la transcripción.                 |
+| Milo "responde"      | Repite lo transcrito. La respuesta del cerebro llega en la fase 3.              |
+| La clave de voz      | Real: cifrada con `safeStorage` en `userData/secrets/`, nunca en `config.json`. |
+| Ajustes persistentes | Sí es real: `config.json` en `userData`.                                        |
+| Milo se arrastra     | Sí es real: el renderer avisa y el main mueve la ventana.                       |
+| Milo recuerda dónde  | Sí es real: `position` en `config.json`, validada al arrancar.                  |
 
 ## Cómo verificar que sigue vivo
 
@@ -306,7 +334,10 @@ npm run dev:web      # solo Chrome, para pulir el personaje
 | Cuánto silencio corta la frase            | `HANGOVER_MS` en `src/app/core/audio/capture.ts`                 |
 | Cuánto hay que hablar para abrirla        | `ONSET_MS` en `capture.ts`; umbral en `vad.ts`                   |
 | Cambiar el permiso que se concede         | `ALLOWED_PERMISSIONS` en `electron/window.ts`                    |
-| Cuánto tarda en "pensar" (simulado)       | `THINKING_MS` en `src/app/core/interaction/interaction.ts`       |
+| Cuánto tarda en "pensar" (simulado)       | Ya no: dura lo que tarde el proveedor de voz                     |
+| Cambiar de proveedor de voz               | `electron/stt/transcriber.ts` (interfaz `Transcriber`)           |
+| Cambiar modelo o idioma de transcripción  | `MODEL` y `LANGUAGE` en `electron/stt/transcriber.ts`            |
+| Dónde se guarda la clave                  | `electron/secrets.ts`; nunca en `config.json`                    |
 | Cuánto y hasta dónde sigue al cursor      | `features/mascot/gaze.ts`                                        |
 
 ## Reglas que no se negocian

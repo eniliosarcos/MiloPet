@@ -111,24 +111,35 @@ El reparto entre real y simulado, que es lo que hay que tener claro:
 - **`listening` ya es real.** Abre el micrófono, mide el ruido de fondo y espera
   a que el VAD decida. No dura 1,5 s: dura lo que dures hablando. Si no dices
   nada, a los 6 s vuelve a `idle` sin mensaje.
-- **`thinking` sigue simulado** con `THINKING_MS`. Ahí irá el STT y luego el LLM.
-- **`acting` sigue simulado** con `ACTING_MS` y un texto fijo.
+- **`thinking` ya es real.** Dura lo que tarde Groq en transcribir. Ahí entrará
+  el LLM en la fase 3.
+- **`acting` sigue simulado** con `ACTING_MS` y repite lo transcrito: el cerebro
+  que responde llega en la fase 3.
 
 El comentario `SIMULADO` en el código marca lo que todavía no existe, para que
 nadie confunda la demo con la funcionalidad.
 
-### El oído: `src/app/core/audio/`
+### El oído: `src/app/core/audio/` y `electron/stt/`
 
-Dos archivos, y la separación es la parte importante:
+Del micrófono al texto hay cuatro paradas, y cada una vive donde puede probarse:
 
-| Archivo      | Qué es                                                                 |
-| ------------ | ---------------------------------------------------------------------- |
-| `vad.ts`     | Máquina de tiempos pura. Entra un nivel RMS, sale `open` o `close`.    |
-| `capture.ts` | Lo único que toca Web Audio: `getUserMedia`, `AnalyserNode`, interval. |
+| Parada               | Dónde    | Qué hace                                                     |
+| -------------------- | -------- | ------------------------------------------------------------ |
+| `vad.ts`             | renderer | Máquina de tiempos: entra un nivel RMS, sale `open`/`close`. |
+| `capture.ts`         | renderer | `getUserMedia`, analizador para el VAD y PCM de la frase.    |
+| `ipc.ts`             | contrato | `transcribe({ pcm, sampleRate })` → `{ ok, text }`.          |
+| `stt/transcriber.ts` | main     | WAV y `fetch` multipart a Groq. La clave no sale de aquí.    |
 
 `vad.ts` no sabe que existe un micrófono, así que se prueba con números en CI
 (`vad.spec.ts`), donde no hay dispositivo. `capture.ts` no decide nada: mide el
-RMS cada 50 ms y se lo pasa al VAD.
+RMS cada 50 ms y se lo pasa al VAD. El WAV se construye en el main
+(`src/shared/audio.ts`), no en el renderer: el renderer manda muestras y el main
+decide el contenedor.
+
+El audio se recoge con un `ScriptProcessorNode` conectado a una ganancia a cero.
+Está obsoleto, pero sigue vivo y no obliga a servir un `AudioWorklet` aparte ni a
+tocar el CSP. Si algún día desaparece, el sustituto es un worklet como archivo
+estático, no como `blob:`.
 
 El umbral no es fijo: los primeros 300 ms se usan para medir el ruido de fondo
 (mediana, para que un golpe de teclado no lo arruine) y el umbral sale de ahí,
@@ -137,6 +148,24 @@ así que el umbral queda en 0,0165.
 
 Y el VAD **no es opcional**: `globalShortcut` no avisa cuando sueltas la tecla,
 así que el silencio es el único botón de parar que existe (decisión 5).
+
+### La clave y la ventana de ajustes
+
+Milo no lleva ninguna clave dentro. La pone cada usuario en `features/settings/`,
+que es un componente raíz distinto: `src/main.ts` mira la query y arranca `App` o
+`Settings`. Esa es la razón de que la ventana de ajustes no abra el micrófono ni
+se suscriba al atajo: no instancia la mascota.
+
+El recorrido de la clave, de la ventana al disco:
+
+1. El usuario pega la clave y pulsa Guardar.
+2. `setSttKey` la manda al main; el renderer no la vuelve a ver.
+3. El main la valida con `GET /models` antes de guardarla.
+4. `secrets.ts` la cifra con `safeStorage` en `userData/secrets/groq.bin`.
+5. `getSttStatus` solo responde `{ configured: true, provider: 'groq' }`.
+
+Si el sistema no puede cifrar, no se guarda nada. Y si el archivo se cifró con
+otro perfil de usuario, se lee como "no hay clave", que es lo único accionable.
 
 ### El truco del click-through
 
@@ -414,11 +443,17 @@ plano**. Van con `safeStorage.encryptString()` (DPAPI en Windows).
 6. core/audio/capture.ts     getUserMedia → calibra 300 ms → VAD por frame
         │                    (real: el silencio cierra la frase, no un timer)
         ▼
-7. core/interaction/         state = 'thinking' → 900 ms SIMULADO
-                             state = 'acting'   → texto fijo SIMULADO
+7. core/interaction/         state = 'thinking' y manda el PCM al main
         │
         ▼
-8. state = 'idle'            Milo vuelve a respirar
+8. electron/stt/             WAV + POST a Groq → texto (o un fallo clasificado)
+        │
+        ▼
+9. state = 'acting'          la burbuja enseña lo que transcribió
+                             (SIMULADO: el cerebro de la fase 3)
+        │
+        ▼
+10. state = 'idle'           Milo vuelve a respirar
         │
         ▼
 9. setTimeout(4000)          SIMULADO no: tiempo real de lectura
@@ -427,8 +462,12 @@ plano**. Van con `safeStorage.encryptString()` (DPAPI en Windows).
 10. bubble-out (420ms)       la burbuja se desvanece y sale del DOM
 ```
 
-Ese es todo el sistema. La fase 2 reemplaza el paso 6; la fase 3, el 7. Nada más
-cambia de sitio.
+Ese es todo el sistema. La fase 3 reemplaza el paso 9: donde hoy la burbuja
+repite lo transcrito, irá la respuesta del cerebro.
+
+Si en el paso 8 no hay clave guardada, el main responde `no-key` y la burbuja
+dice dónde configurarla. Ese es el otro camino, y el único que necesita al
+usuario haciendo algo antes de hablar.
 
 ---
 
@@ -446,6 +485,8 @@ cambia de sitio.
 | **CSP**      | Lista de qué puede cargar la página.                         |
 | **VAD**      | Detección de voz: saber cuándo hablas y cuándo callas.       |
 | **STT**      | Voz a texto (Whisper).                                       |
+| **BYOK**     | "Trae tu propia clave": cada usuario configura la suya.      |
+| **DPAPI**    | El cifrado de Windows; lo que usa `safeStorage` por debajo.  |
 | **Hotspot**  | La zona cliqueable y arrastrable: el personaje y la burbuja. |
 
 ---
