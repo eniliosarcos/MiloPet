@@ -58,12 +58,18 @@
 // El conjunto: lo que el estado mueve (arriba al escuchar, de lado al pensar) y
 // lo que la mirada inclina hacia el cursor. `transform` y `translate` son
 // propiedades distintas a propósito: se suman en vez de competir.
+//
+// Los 700ms de `translate` no son la velocidad del seguimiento, son la de la
+// vuelta al centro cuando el cursor se va: despedirse despacio se lee como
+// atención, no como un servomotor. Seguir es otra cosa y lo fija la regla de
+// `[data-gaze='true']`, más abajo: CSS toma la duración del estado al que se
+// llega, así que cada caso vive en su propia regla.
 .mascot__eyes {
   transform-box: fill-box;
   transform-origin: center;
   transition:
     transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    translate 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    translate 700ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 // Cada ojo es una forma blanca. Dos animaciones conviven sin pisarse porque
@@ -153,6 +159,16 @@
 // estado. Al salir del alcance, `glance` vuelve a empezar en 0 y no hay salto.
 .mascot[data-gaze='true'] .mascot__eye {
   animation-name: blink;
+}
+
+// Seguir al cursor es un reflejo: 160ms, no los 700ms de la despedida. Al
+// perder la mirada esta regla deja de aplicar y el conjunto recupera la vuelta
+// lenta sin que nadie toque JavaScript. La curva es la misma en ambos casos
+// (ease-out), así que lo único que cambia es cuánto dura el gesto.
+.mascot[data-gaze='true'] .mascot__eyes {
+  transition:
+    transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    translate 160ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes breathe {

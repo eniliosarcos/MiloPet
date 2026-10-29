@@ -23,11 +23,12 @@ export const GAZE_RANGE = 0.8;
 /**
  * Desplazamiento en el borde del alcance, como fracción del máximo.
  *
- * La mirada crece a medida que el cursor se acerca: no es lo mismo tenerlo en el
- * borde de la ventana que encima de la cara. El borde se queda cerca del tope
- * para no perder reacción, y el resto del recorrido lo gana al acercarse.
+ * A 1 no hay rampa: dentro del alcance la mirada sale ya completa, en el borde
+ * de la ventana igual que encima de la cara. Bajarlo hace que el ojo empiece
+ * corto en el borde y gane recorrido al acercarse, pero entonces el gesto casi
+ * no se nota cuando el cursor está lejos.
  */
-export const GAZE_EDGE = 0.7;
+export const GAZE_EDGE = 1;
 
 /**
  * Radio muerto alrededor del centro de los ojos, en fracción del lado.
@@ -41,10 +42,10 @@ export const GAZE_DEADZONE = 0.08;
 /**
  * Desplazamiento máximo, en unidades del `viewBox` (200x200).
  *
- * Con 8 unidades el ojo blanco se corre media anchura: es lo que se nota al
+ * Con 15 unidades el ojo blanco se corre media anchura: es lo que se nota al
  * tener el cursor encima, sin que la forma se salga del cuerpo.
  */
-export const GAZE_MAX = 8;
+export const GAZE_MAX = 15;
 
 /** El ojo es más ancho que alto, así que en vertical el desplazamiento se recorta. */
 export const GAZE_VERTICAL = 0.5;

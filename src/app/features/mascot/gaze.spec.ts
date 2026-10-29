@@ -23,14 +23,15 @@ describe('gazeToward', () => {
     expect(magnitude(gaze)).toBeLessThanOrEqual(1);
   });
 
-  it('acercar el cursor aumenta la mirada, no la encoge', () => {
-    // Este es el bug que se vio en la ventana real: con una curva proporcional a
-    // la distancia, el ojo volvía al centro justo cuando el cursor se acercaba.
+  it('acercar el cursor cambia la dirección, no el tamaño de la mirada', () => {
+    // Con `GAZE_EDGE = 1` no hay rampa: dentro del alcance la mirada sale ya al
+    // máximo, en el borde de la ventana igual que sobre la cara. Si alguien baja
+    // ese valor, esta prueba deja de valer y hay que devolverle la curva.
     const far = gazeToward(SIZE * 0.7, 0, SIZE, null);
     const near = gazeToward(SIZE * 0.2, 0, SIZE, null);
 
-    expect(magnitude(far)).toBeGreaterThan(0);
-    expect(magnitude(near)).toBeGreaterThan(magnitude(far));
+    expect(magnitude(far)).toBeCloseTo(1, 5);
+    expect(magnitude(near)).toBeCloseTo(1, 5);
   });
 
   it('entre los ojos conserva la última dirección en vez de volver al centro', () => {

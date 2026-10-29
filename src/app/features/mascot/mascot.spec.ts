@@ -75,15 +75,17 @@ describe('Mascot', () => {
     expect(y).toBeLessThan(0);
   });
 
-  it('cuanto más cerca el cursor, más se desplazan los ojos', () => {
+  it('acercar el cursor cambia la dirección, no el desplazamiento', () => {
     movePointer(EYE_X + 150, EYE_Y);
     const far = offset()[0];
 
     movePointer(EYE_X + 40, EYE_Y);
     const near = offset()[0];
 
+    // `GAZE_EDGE = 1` en `gaze.ts`: el desplazamiento ya está al máximo desde el
+    // borde del alcance, así que acercarse no lo agranda.
     expect(far).toBeGreaterThan(0);
-    expect(near).toBeGreaterThan(far);
+    expect(near).toBeCloseTo(far, 5);
   });
 
   it('entre los dos ojos mantiene la última dirección, ya al máximo', () => {
