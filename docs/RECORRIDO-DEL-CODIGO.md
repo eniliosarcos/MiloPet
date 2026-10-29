@@ -75,12 +75,14 @@ router o HTTP, se registran aquí.
 
 ## 3. El director de orquesta: `src/app/app.ts`
 
-Este es el archivo más importante del renderer. Hace cuatro cosas:
+Ya no es el archivo más importante del renderer: el bucle se mudó a
+`src/app/core/interaction/interaction.ts` en cuanto dejó de ser una cadena de
+`setTimeout` y pasó a depender del micrófono. `app.ts` es **la ventana**, y hace
+tres cosas:
 
-1. Escucha el atajo.
-2. Mueve la máquina de estados.
-3. Alimenta al personaje y a la burbuja.
-4. Le dice al proceso main si la ventana debe aceptar clics.
+1. Escucha el atajo y se lo pasa al bucle.
+2. Le dice al proceso main si la ventana debe aceptar clics.
+3. Arrastra la ventana por IPC (ver la sección 8).
 
 ### Los cinco conceptos de Angular que usa
 
@@ -96,15 +98,45 @@ Este es el archivo más importante del renderer. Hace cuatro cosas:
 
 ```
 idle ──(atajo)──► listening ──► thinking ──► acting ──► idle
-                                                   └──► error (si el atajo falla)
+                     │                             └──► error (micrófono o atajo)
+                     └──(silencio)──► idle
 ```
 
-`runInteractionLoop()` es el único lugar que la mueve. El flag `busy` evita que
-una segunda pulsación interrumpa una interacción en curso.
+`Interaction.start()` en `core/interaction/interaction.ts` es el único lugar que
+la mueve. El flag `busy` evita que una segunda pulsación interrumpa una
+interacción en curso.
 
-**Importante:** hoy `listening` no escucha nada. Es un `setTimeout(1500)`. El
-comentario `SIMULADO` en el código lo dice explícitamente para que nadie confunda
-la demo con la funcionalidad.
+El reparto entre real y simulado, que es lo que hay que tener claro:
+
+- **`listening` ya es real.** Abre el micrófono, mide el ruido de fondo y espera
+  a que el VAD decida. No dura 1,5 s: dura lo que dures hablando. Si no dices
+  nada, a los 6 s vuelve a `idle` sin mensaje.
+- **`thinking` sigue simulado** con `THINKING_MS`. Ahí irá el STT y luego el LLM.
+- **`acting` sigue simulado** con `ACTING_MS` y un texto fijo.
+
+El comentario `SIMULADO` en el código marca lo que todavía no existe, para que
+nadie confunda la demo con la funcionalidad.
+
+### El oído: `src/app/core/audio/`
+
+Dos archivos, y la separación es la parte importante:
+
+| Archivo      | Qué es                                                                 |
+| ------------ | ---------------------------------------------------------------------- |
+| `vad.ts`     | Máquina de tiempos pura. Entra un nivel RMS, sale `open` o `close`.    |
+| `capture.ts` | Lo único que toca Web Audio: `getUserMedia`, `AnalyserNode`, interval. |
+
+`vad.ts` no sabe que existe un micrófono, así que se prueba con números en CI
+(`vad.spec.ts`), donde no hay dispositivo. `capture.ts` no decide nada: mide el
+RMS cada 50 ms y se lo pasa al VAD.
+
+El umbral no es fijo: los primeros 300 ms se usan para medir el ruido de fondo
+(mediana, para que un golpe de teclado no lo arruine) y el umbral sale de ahí,
+acotado entre 0,012 y 0,12. En una habitación en silencio el suelo mide ≈0,0055,
+así que el umbral queda en 0,0165.
+
+Y el VAD **no es opcional**: `globalShortcut` no avisa cuando sueltas la tecla,
+así que el silencio es el único botón de parar que existe (decisión 5).
 
 ### El truco del click-through
 
@@ -372,17 +404,18 @@ plano**. Van con `safeStorage.encryptString()` (DPAPI en Windows).
 4. electron/preload.ts       traduce el canal a window.milo.onHotkey
         │
         ▼
-5. src/app/app.ts            runInteractionLoop(): state = 'listening'
+5. src/app/app.ts            Interaction.start(): state = 'listening'
         │
         ├──► app-mascot       data-state="listening" → CSS anima
         │
         └──► effect()         milo.setState('listening') → main (solo log)
         │
         ▼
-6. setTimeout(1500)          SIMULADO: aquí irá el micrófono en la fase 2
-        │
+6. core/audio/capture.ts     getUserMedia → calibra 300 ms → VAD por frame
+        │                    (real: el silencio cierra la frase, no un timer)
         ▼
-7. state = 'thinking'  →  state = 'acting'  →  mensaje en la burbuja
+7. core/interaction/         state = 'thinking' → 900 ms SIMULADO
+                             state = 'acting'   → texto fijo SIMULADO
         │
         ▼
 8. state = 'idle'            Milo vuelve a respirar

@@ -12,15 +12,15 @@ que necesitas leer antes de tocar código.
 Angular dibuja al personaje; Electron es dueño de la ventana, del atajo global y
 de todo lo que requiere permisos. **El renderer nunca toca Node.**
 
-## Estado actual: fase 1 de 5
+## Estado actual: fase 2 de 5
 
-| Fase | Qué añade                                               | Estado    |
-| ---- | ------------------------------------------------------- | --------- |
-| 1    | Ventana + atajo global + máquina de estados + personaje | ✅ hecho  |
-| 2    | Micrófono, VAD, transcripción (STT)                     | pendiente |
-| 3    | Cerebro (LLM) + router de intención                     | pendiente |
-| 4    | Acciones reales con lista blanca                        | pendiente |
-| 5    | Contexto (ventana activa, resumen de pantalla)          | pendiente |
+| Fase | Qué añade                                               | Estado          |
+| ---- | ------------------------------------------------------- | --------------- |
+| 1    | Ventana + atajo global + máquina de estados + personaje | ✅ hecho        |
+| 2    | Micrófono, VAD, transcripción (STT)                     | 🟡 falta el STT |
+| 3    | Cerebro (LLM) + router de intención                     | pendiente       |
+| 4    | Acciones reales con lista blanca                        | pendiente       |
+| 5    | Contexto (ventana activa, resumen de pantalla)          | pendiente       |
 
 ## El flujo completo hoy
 
@@ -65,14 +65,17 @@ métodos que `preload.ts` decidió publicar.
 
 ### Renderer (Angular)
 
-| Archivo                            | Responsabilidad                                                                 |
-| ---------------------------------- | ------------------------------------------------------------------------------- |
-| `src/app/app.ts`                   | Máquina de estados, suscripción al atajo, paso del ratón.                       |
-| `src/app/core/milo/milo-bridge.ts` | Token `MILO`; si no hay Electron, devuelve un sustituto que funciona en Chrome. |
-| `src/app/features/mascot/`         | El cuerpo: SVG + estados + animaciones + mirada que sigue al cursor.            |
-| `src/app/features/bubble/`         | La burbuja de texto.                                                            |
+| Archivo                                   | Responsabilidad                                                                  |
+| ----------------------------------------- | -------------------------------------------------------------------------------- |
+| `src/app/app.ts`                          | La ventana: arrastre por IPC, click-through y modo dev de zonas.                 |
+| `src/app/core/interaction/interaction.ts` | El bucle: atajo → escuchar → pensar → responder, y el ciclo de vida del mensaje. |
+| `src/app/core/audio/vad.ts`               | Máquina de tiempos del VAD, sin Web Audio ni timers: se prueba con números.      |
+| `src/app/core/audio/capture.ts`           | Micrófono real: `getUserMedia` + `AnalyserNode` + calibración del ruido.         |
+| `src/app/core/milo/milo-bridge.ts`        | Token `MILO`; si no hay Electron, devuelve un sustituto que funciona en Chrome.  |
+| `src/app/features/mascot/`                | El cuerpo: SVG + estados + animaciones + mirada que sigue al cursor.             |
+| `src/app/features/bubble/`                | La burbuja de texto.                                                             |
 
-## Las ocho decisiones que no son obvias
+## Las nueve decisiones que no son obvias
 
 Cada una existe por un bug concreto que ya nos costó tiempo.
 
@@ -233,16 +236,48 @@ olvido, y no bloquea el resto de fases.
 Disparador para retomarla: que exista una duración real de `acting` y se sepa si
 habrá TTS.
 
+**9. La captura de audio vive en el renderer y el VAD corta la frase.**
+`getUserMedia` corre en el renderer. Capturar en el proceso main era la otra
+opción y se descartó por precio: Chromium ya trae cancelación de eco, supresión de
+ruido y ganancia automática, y reimplementarlas con dependencias nativas no
+compraría nada. El coste real está en otro sitio: el permiso hay que concederlo a
+mano (`setPermissionRequestHandler` y `setPermissionCheckHandler` en
+`window.ts`, solo `media` y solo para nuestra ventana) y el micrófono bajo
+`file://` no se prueba en el dev server, se prueba en la ventana empaquetada.
+
+Medido en la ventana real (build, `file://`, sandbox, CSP estricto):
+`isSecureContext` es `true`, el permiso sale `granted`, `getUserMedia` devuelve
+una pista y `AudioContext` corre a 48 kHz. El ruido de fondo de una habitación en
+silencio mide ≈0,0055 RMS, así que el umbral por defecto (0,0165) queda por
+encima del ruido y por debajo de la voz.
+
+El VAD son dos piezas y no una. `core/audio/vad.ts` es una máquina de tiempos
+pura: entra un nivel, sale `open` o `close`. `core/audio/capture.ts` es lo único
+que toca Web Audio. Se separan porque en CI no hay micrófono y una función que
+solo suma frames se prueba con números. Los tiempos: 150 ms de voz para abrir (un
+clic dura un frame), 800 ms de silencio para cerrar, 15 s de tope por frase y 6 s
+de espera sin oír nada.
+
+Dos trampas de esta ronda:
+
+- **`setInterval`, no `requestAnimationFrame`.** El VAD tiene que latir cuando la
+  ventana está tapada por otra aplicación, y ahí el rAF se detiene: Milo se
+  quedaría con el micrófono abierto. La ventana lleva `backgroundThrottling:
+false` por el mismo motivo.
+- **Nada de `AudioWorklet` por ahora.** `index.html` no declara `worker-src`, así
+  que un worklet creado desde `blob:` choca con `default-src 'self' file:`. Con
+  `AnalyserNode` cada 50 ms sobra para decidir cuándo hablas.
+
 ## Qué está simulado (no confundir con real)
 
-| Parece               | Realidad                                                       |
-| -------------------- | -------------------------------------------------------------- |
-| Milo "escucha"       | `setTimeout(1500)` en `app.ts`. No hay `getUserMedia`.         |
-| Milo "piensa"        | Otro `setTimeout(900)`. No hay LLM.                            |
-| Milo "responde"      | Texto fijo en el código.                                       |
-| Ajustes persistentes | Sí es real: `config.json` en `userData`.                       |
-| Milo se arrastra     | Sí es real: el renderer avisa y el main mueve la ventana.      |
-| Milo recuerda dónde  | Sí es real: `position` en `config.json`, validada al arrancar. |
+| Parece               | Realidad                                                                         |
+| -------------------- | -------------------------------------------------------------------------------- |
+| Milo "escucha"       | Real a medias: `getUserMedia` y VAD de verdad. No guarda audio ni lo transcribe. |
+| Milo "piensa"        | `setTimeout(900)` en `core/interaction/interaction.ts`. No hay LLM.              |
+| Milo "responde"      | Texto fijo en el código.                                                         |
+| Ajustes persistentes | Sí es real: `config.json` en `userData`.                                         |
+| Milo se arrastra     | Sí es real: el renderer avisa y el main mueve la ventana.                        |
+| Milo recuerda dónde  | Sí es real: `position` en `config.json`, validada al arrancar.                   |
 
 ## Cómo verificar que sigue vivo
 
@@ -256,19 +291,23 @@ npm run dev:web      # solo Chrome, para pulir el personaje
 
 ## Si quieres cambiar algo, toca aquí
 
-| Quiero…                                   | Archivo                                                   |
-| ----------------------------------------- | --------------------------------------------------------- |
-| Cambiar el color o la forma del personaje | `features/mascot/mascot.html`                             |
-| Que reaccione distinto en un estado       | `features/mascot/mascot.scss`                             |
-| Añadir un estado nuevo                    | `src/shared/ipc.ts` (`MascotState`) + `mascot.scss`       |
-| Cambiar el atajo por defecto              | `src/shared/ipc.ts` (`DEFAULT_HOTKEY`)                    |
-| Añadir una operación privilegiada         | `src/shared/ipc.ts` → `preload.ts` → handler en `main.ts` |
-| Mover o redimensionar la ventana          | `electron/window.ts`                                      |
-| Cambiar el área cliqueable y de arrastre  | `.hotspot` en `src/app/app.scss`                          |
-| Cuándo se descarta una posición guardada  | `MIN_VISIBLE` en `electron/window.ts`                     |
-| Cambiar el estilo de la burbuja           | `features/bubble/bubble.scss`                             |
-| Cuánto dura el mensaje en pantalla        | `BUBBLE_VISIBLE_MS` en `src/app/app.ts`                   |
-| Cuánto y hasta dónde sigue al cursor      | `features/mascot/gaze.ts`                                 |
+| Quiero…                                   | Archivo                                                          |
+| ----------------------------------------- | ---------------------------------------------------------------- |
+| Cambiar el color o la forma del personaje | `features/mascot/mascot.html`                                    |
+| Que reaccione distinto en un estado       | `features/mascot/mascot.scss`                                    |
+| Añadir un estado nuevo                    | `src/shared/ipc.ts` (`MascotState`) + `mascot.scss`              |
+| Cambiar el atajo por defecto              | `src/shared/ipc.ts` (`DEFAULT_HOTKEY`)                           |
+| Añadir una operación privilegiada         | `src/shared/ipc.ts` → `preload.ts` → handler en `main.ts`        |
+| Mover o redimensionar la ventana          | `electron/window.ts`                                             |
+| Cambiar el área cliqueable y de arrastre  | `.hotspot` en `src/app/app.scss`                                 |
+| Cuándo se descarta una posición guardada  | `MIN_VISIBLE` en `electron/window.ts`                            |
+| Cambiar el estilo de la burbuja           | `features/bubble/bubble.scss`                                    |
+| Cuánto dura el mensaje en pantalla        | `BUBBLE_VISIBLE_MS` en `src/app/core/interaction/interaction.ts` |
+| Cuánto silencio corta la frase            | `HANGOVER_MS` en `src/app/core/audio/capture.ts`                 |
+| Cuánto hay que hablar para abrirla        | `ONSET_MS` en `capture.ts`; umbral en `vad.ts`                   |
+| Cambiar el permiso que se concede         | `ALLOWED_PERMISSIONS` en `electron/window.ts`                    |
+| Cuánto tarda en "pensar" (simulado)       | `THINKING_MS` en `src/app/core/interaction/interaction.ts`       |
+| Cuánto y hasta dónde sigue al cursor      | `features/mascot/gaze.ts`                                        |
 
 ## Reglas que no se negocian
 

@@ -8,6 +8,14 @@ Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 
 ## Historial
 
+### 2026-10-29 — Oídos reales: micrófono y VAD · feat
+
+**Qué:** El bucle de interacción sale de `app.ts` a `core/interaction/`, y `listening` deja de ser un `setTimeout(1500)`: abre el micrófono con `getUserMedia`, calibra el ruido de fondo 300 ms y cierra la frase por energía. Sin voz vuelve a `idle` sin mensaje.
+**Por qué:** `globalShortcut` no emite la tecla soltada, así que el silencio es el único botón de parar que existe; sin VAD, Milo se queda escuchando para siempre.
+**Tocó:** `src/app/core/audio/vad.ts` y su spec, `core/audio/capture.ts`, `core/interaction/interaction.ts`, `app.ts`, `app.spec.ts`, `features/bubble/bubble.ts`, `electron/window.ts`, `docs/ARQUITECTURA.md`, `docs/RECORRIDO-DEL-CODIGO.md`.
+**Aprendido:** Medido en la ventana empaquetada: `file://` es contexto seguro, el permiso sale `granted`, `getUserMedia` devuelve pista y `AudioContext` corre a 48 kHz con ruido de fondo ≈0,0055 RMS. `setInterval` y no rAF: con la ventana tapada el rAF se detiene y el VAD no cortaría.
+**Commits:** `e6493d1..b4bf50a`
+
 ### 2026-10-29 — Ojos más chicos y separación constante al mirar · fix
 
 **Qué:** Los ojos bajan al 90 % del dibujo original, y las dos escalas que los mueven —la perspectiva de la mirada y el 6 % de `listening`— anclan el borde interno de cada ojo en vez de su centro.
