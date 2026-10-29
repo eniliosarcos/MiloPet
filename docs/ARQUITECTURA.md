@@ -69,10 +69,10 @@ métodos que `preload.ts` decidió publicar.
 | ---------------------------------- | ------------------------------------------------------------------------------- |
 | `src/app/app.ts`                   | Máquina de estados, suscripción al atajo, paso del ratón.                       |
 | `src/app/core/milo/milo-bridge.ts` | Token `MILO`; si no hay Electron, devuelve un sustituto que funciona en Chrome. |
-| `src/app/features/mascot/`         | El cuerpo: SVG + estados + animaciones.                                         |
+| `src/app/features/mascot/`         | El cuerpo: SVG + estados + animaciones + mirada que sigue al cursor.            |
 | `src/app/features/bubble/`         | La burbuja de texto.                                                            |
 
-## Las seis decisiones que no son obvias
+## Las siete decisiones que no son obvias
 
 Cada una existe por un bug concreto que ya nos costó tiempo.
 
@@ -122,6 +122,16 @@ estaba Milo. Con `skipTaskbar: true`, una ventana fuera de pantalla no se puede
 recuperar, así que `initialPosition()` exige que al menos `MIN_VISIBLE` (80 px)
 caigan dentro de algún monitor y, si no, vuelve a la esquina inferior derecha.
 
+**7. La mirada sigue al cursor solo dentro de la ventana.**
+El renderer no recibe eventos de ratón fuera de su ventana, así que no hay forma
+gratis de saber dónde está el cursor en el resto de la pantalla. `forward: true`
+en `setIgnoreMouseEvents` sí reenvía cada `mousemove` que cae dentro de la
+ventana de 340×340, y como la ventana está ajustada al personaje, "cerca" es
+exactamente eso: mientras el cursor está encima de Milo, los ojos lo siguen.
+Hacerlo en toda la pantalla exigiría que el proceso main consultara
+`screen.getCursorScreenPoint()` en un temporizador y abriera un canal IPC solo
+para eso: un sondeo permanente por un detalle cosmético. Descartado.
+
 ## Qué está simulado (no confundir con real)
 
 | Parece               | Realidad                                                       |
@@ -158,6 +168,7 @@ npm run dev:web      # solo Chrome, para pulir el personaje
 | Cuándo se descarta una posición guardada  | `MIN_VISIBLE` en `electron/window.ts`                     |
 | Cambiar el estilo de la burbuja           | `features/bubble/bubble.scss`                             |
 | Cuánto dura el mensaje en pantalla        | `BUBBLE_VISIBLE_MS` en `src/app/app.ts`                   |
+| Cuánto y hasta dónde sigue al cursor      | `features/mascot/gaze.ts`                                 |
 
 ## Reglas que no se negocian
 

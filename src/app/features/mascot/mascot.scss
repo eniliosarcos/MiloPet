@@ -55,11 +55,15 @@
   transform-origin: center;
 }
 
-// El conjunto: lo que el estado mueve (arriba al escuchar, de lado al pensar).
+// El conjunto: lo que el estado mueve (arriba al escuchar, de lado al pensar) y
+// lo que la mirada inclina hacia el cursor. `transform` y `translate` son
+// propiedades distintas a propósito: se suman en vez de competir.
 .mascot__eyes {
   transform-box: fill-box;
   transform-origin: center;
-  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition:
+    transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    translate 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 // Cada ojo es una forma blanca. Dos animaciones conviven sin pisarse porque
@@ -141,6 +145,14 @@
     opacity: 1;
     transform: scale(1.05, -0.9) translateY(-2px);
   }
+}
+
+// Con el cursor cerca, los ojos saltan a mirarlo y el barrido automático se
+// apaga: dos movimientos de mirada a la vez se leerían como temblor. Solo se
+// quita el nombre `glance`, así el parpadeo conserva la duración que le dio el
+// estado. Al salir del alcance, `glance` vuelve a empezar en 0 y no hay salto.
+.mascot[data-gaze='true'] .mascot__eye {
+  animation-name: blink;
 }
 
 @keyframes breathe {

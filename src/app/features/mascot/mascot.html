@@ -4,7 +4,13 @@
   separado según el estado. `data-state` en el <svg> es el interruptor.
   El viewBox es 200x200 y todas las coordenadas viven en ese sistema.
 -->
-<svg class="mascot" viewBox="0 0 200 200" [attr.data-state]="state()" aria-hidden="true">
+<svg
+  class="mascot"
+  viewBox="0 0 200 200"
+  [attr.data-state]="state()"
+  [attr.data-gaze]="tracking() ? 'true' : null"
+  aria-hidden="true"
+>
   <defs>
     <!-- Degradado del cuerpo: gris arriba a la izquierda y negro en el borde.
          El foco de luz desplazado es lo que da volumen sin sombras artificiales. -->
@@ -31,8 +37,9 @@
            brillo. Tiene dos siluetas y el estado decide cuál se ve:
            el óvalo es el reposo, y la forma con el párpado caído hacia dentro
            solo aparece al fallar. El grupo `.mascot__eye` es el que parpadea y
-           barre la mirada; `.mascot__eyes` desplaza el conjunto. -->
-      <g class="mascot__eyes">
+           barre la mirada; `.mascot__eyes` desplaza el conjunto y, cuando el
+           cursor está cerca, lo inclina hacia él (`translate` inline). -->
+      <g class="mascot__eyes" [style.translate]="gazeOffset()">
         <g class="mascot__eye mascot__eye--left">
           <ellipse
             class="mascot__eye-shape mascot__eye-shape--calm"

@@ -129,6 +129,10 @@ sistema manda el clic al programa de detrás. Y aquí hay una trampa: una regió
 hotspot entero, el aviso que desbloquea los clics dejaría de llegar. Por eso el
 agarre está metido 12 px: el anillo exterior mantiene la cadena viva.
 
+Esos mismos eventos son los que alimentan los ojos de Milo (sección 5): mientras
+el cursor está dentro de la ventana, la mirada lo sigue. Fuera de ella el
+renderer no ve nada, y por eso el seguimiento se corta.
+
 ---
 
 ## 4. El escenario: `src/app/app.html` y `src/app/app.scss`
@@ -160,12 +164,13 @@ del `<svg>`.
 
 ## 5. El personaje: `src/app/features/mascot/`
 
-Tres archivos, una idea: **Milo es geometría, no imágenes**.
+Cuatro archivos, una idea: **Milo es geometría, no imágenes**.
 
 - `mascot.html` — el dibujo. Un `<svg viewBox="0 0 200 200">` con elipses y
   curvas. Todo vive en un sistema de coordenadas de 200x200, así que escalar es
   gratis y no hay píxeles borrosos.
-- `mascot.ts` — recibe `state` como `input`. Nada más.
+- `mascot.ts` — recibe `state` como `input` y mide dónde está el cursor.
+- `gaze.ts` — la matemática de la mirada, sin DOM: un vector de -1 a 1 o `null`.
 - `mascot.scss` — el comportamiento. Aquí está la personalidad.
 
 La técnica central es CSS puro:
@@ -185,7 +190,7 @@ Cambiar `data-state` cambia el dibujo, sin JavaScript por medio. Cada estado
 tiene su propia animación (`breathe`, `listening`, `bounce`, `blink`, `glance`,
 `pulse`).
 
-Cuatro detalles que cuestan:
+Cinco detalles que cuestan:
 
 - `transform-box: fill-box` + `transform-origin` son obligatorios para que un
   `scale` en una forma SVG se comporte como esperas. Sin eso, la elipse se
@@ -198,6 +203,11 @@ Cuatro detalles que cuestan:
 - La mirada barre con la propiedad individual `translate`, no con `transform`:
   así el barrido (`glance`) y el parpadeo (`blink`, que usa `transform:
 scaleY`) se componen en vez de pisarse.
+- La mirada que sigue al cursor no es CSS puro: `mascot.ts` mide la caja del
+  personaje, calcula la dirección con `gaze.ts` y escribe `translate` en el grupo
+  `.mascot__eyes`. Usa la propiedad individual (no `transform`) para sumarse a
+  los desplazamientos de cada estado, y mientras el cursor está cerca apaga el
+  barrido automático: dos miradas a la vez se leerían como temblor.
 - La sombra en el suelo (`mascot__shadow`) no es decorativa: sin ella, el
   personaje parece flotar.
 
