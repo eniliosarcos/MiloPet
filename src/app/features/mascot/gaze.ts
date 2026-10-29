@@ -51,11 +51,11 @@ export const GAZE_MAX = 15;
 export const GAZE_VERTICAL = 0.5;
 
 /**
- * Cuánto encoge el ojo que queda al lado contrario de la mirada, como fracción.
+ * Cuánto encoge el ojo hacia el que se mira, como fracción.
  *
- * Los dos ojos se desplazan lo mismo, pero el que se aleja del objetivo lo hace
- * sobre una cara que gira: se ve más estrecho. Es lo que convierte un
- * desplazamiento plano en la sensación de que Milo vuelve la cara.
+ * Los dos ojos se desplazan lo mismo, pero el que apunta al objetivo lo hace en
+ * una cara que gira: se ve más estrecho. Es lo que convierte un desplazamiento
+ * plano en la sensación de que Milo vuelve la cara.
  */
 export const GAZE_FAR_SCALE = 0.1;
 
@@ -66,9 +66,9 @@ export interface EyeScales {
 }
 
 /**
- * Encoge el ojo hacia el que NO se mira.
+ * Encoge el ojo que queda más lejos del centro en la dirección de la mirada.
  *
- * Mirando a la derecha, el izquierdo queda atrás —más lejos del cursor— y es el
+ * Mirando a la derecha, el derecho es el que se aleja hacia el cursor y es el
  * que se reduce. Mirando al centro los dos valen 1: sin giro no hay perspectiva
  * que fingir.
  */
@@ -76,8 +76,8 @@ export function eyeScales(gaze: Gaze | null): EyeScales {
   const x = gaze?.x ?? 0;
 
   return {
-    left: 1 - Math.max(0, x) * GAZE_FAR_SCALE,
-    right: 1 - Math.max(0, -x) * GAZE_FAR_SCALE,
+    left: 1 - Math.max(0, -x) * GAZE_FAR_SCALE,
+    right: 1 - Math.max(0, x) * GAZE_FAR_SCALE,
   };
 }
 

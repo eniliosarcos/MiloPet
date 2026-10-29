@@ -53,9 +53,9 @@ export class Mascot {
   });
 
   /**
-   * El ojo que queda detrás de la mirada se encoge un poco. Es la única nota de
-   * volumen que puede dar un dibujo plano: sin ella el giro parece un
-   * desplazamiento, no una cara que se vuelve.
+   * El ojo que queda más lejos en la dirección de la mirada se encoge un poco.
+   * Es la única nota de volumen que puede dar un dibujo plano: sin ella el giro
+   * parece un desplazamiento, no una cara que se vuelve.
    */
   protected readonly eyeScale = computed(() => eyeScales(this.gaze()));
 

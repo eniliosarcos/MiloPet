@@ -55,26 +55,26 @@ describe('eyeScales', () => {
     expect(eyeScales({ x: 0, y: 0 })).toEqual({ left: 1, right: 1 });
   });
 
-  it('encoge el ojo que queda al lado contrario de la mirada', () => {
-    // Mirando a la derecha, el izquierdo es el que se aleja del cursor.
+  it('encoge el ojo que queda más lejos en la dirección de la mirada', () => {
+    // Mirando a la derecha, el derecho es el que se aleja hacia el cursor.
     const lookRight = eyeScales({ x: 1, y: 0 });
 
-    expect(lookRight.left).toBeCloseTo(1 - GAZE_FAR_SCALE, 10);
-    expect(lookRight.right).toBe(1);
+    expect(lookRight.right).toBeCloseTo(1 - GAZE_FAR_SCALE, 10);
+    expect(lookRight.left).toBe(1);
   });
 
   it('es simétrico y nunca encoge más que el factor máximo', () => {
     const lookLeft = eyeScales({ x: -1, y: 0 });
     const lookRight = eyeScales({ x: 1, y: 0 });
 
-    expect(lookLeft.right).toBeCloseTo(lookRight.left, 10);
-    expect(lookLeft.left).toBe(1);
-    expect(lookRight.left).toBeGreaterThanOrEqual(1 - GAZE_FAR_SCALE);
+    expect(lookLeft.left).toBeCloseTo(lookRight.right, 10);
+    expect(lookLeft.right).toBe(1);
+    expect(lookRight.right).toBeGreaterThanOrEqual(1 - GAZE_FAR_SCALE);
   });
 
   it('encoge de forma proporcional: media mirada, medio encogimiento', () => {
     const half = eyeScales({ x: 0.5, y: 0 });
 
-    expect(half.left).toBeCloseTo(1 - GAZE_FAR_SCALE / 2, 10);
+    expect(half.right).toBeCloseTo(1 - GAZE_FAR_SCALE / 2, 10);
   });
 });
