@@ -8,6 +8,14 @@ Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 
 ## Historial
 
+### 2026-10-29 — La burbuja se cierra sola y con una (x) · feat
+
+**Qué:** El mensaje vive 4 s tras volver a `idle`, se desvanece en 420 ms y sale del DOM; una (x) lo cierra antes.
+**Por qué:** antes se quedaba en pantalla para siempre, hasta la siguiente pulsación del atajo.
+**Tocó:** `src/app/app.ts`, `src/app/app.html`, `src/app/app.scss`, `src/app/app.spec.ts`, `features/bubble/`, `docs/`.
+**Aprendido:** la (x) exige `data-interactive` en el envoltorio o funciona en web y está muerta en Electron; hay un test que lo vigila. El CLI de Angular inyectó un UUID de telemetría en `angular.json` al arrancar: revertido y desactivado.
+**Commits:** `0952250..2061e93`
+
 ### 2026-10-29 — Reglas de agentes, skills y presupuesto del historial · chore
 
 **Qué:** `AGENTS.md` con las reglas del repo, las skills `milo-ipc` y `milo-verify`, y un check que limita el tamaño del historial.
