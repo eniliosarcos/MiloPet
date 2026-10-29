@@ -7,6 +7,55 @@ Cada entrada responde: qué se hizo, por qué, y en qué archivos.
 
 ## Historial
 
+### 2026-10-28 — Calidad, convenciones y CI
+
+**Tipo:** chore (tooling) + docs
+
+**Descripción:**
+Se añadieron las prácticas que hacen que el proyecto sea mantenible y apto para
+GitHub:
+
+- **ESLint 22** (angular-eslint) con dos bloques separados: uno para el renderer
+  con reglas de Angular y plantillas, y otro para `electron/` con globals de Node
+  y sin reglas de Angular. `no-console` avisa en ambos.
+- **Prettier** como único formateador, con `format` y `format:check`, e
+  `.prettierignore` para no tocar build ni lockfile.
+- **Conventional Commits** validados con commitlint, más `lint-staged` en el
+  pre-commit (arregla y formatea solo lo que se está commiteando).
+- **`.gitattributes`** con `eol=lf`. Sin esto, en Windows todo el repo aparece
+  modificado cada vez que git toca los archivos.
+- **VS Code** con formato al guardar, ESLint al guardar y extensiones
+  recomendadas, para que el editor no sea una decisión personal.
+- **CI en GitHub Actions**: `npm ci`, lint, formato, tests y build en cada push
+  y pull request. Se salta la descarga del binario de Electron porque no hace
+  falta para verificar.
+
+Verificado antes de commitear: `lint` limpio, `format:check` limpio, `build`
+correcto, 2 tests en verde, y commitlint **rechaza** un mensaje mal formado
+(probado a propósito).
+
+**Archivos:**
+
+| Archivo                                             | Qué hace                                                                                             |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `eslint.config.js`                                  | Reglas separadas para renderer y proceso main.                                                       |
+| `.prettierrc`, `.prettierignore`                    | Formato único del proyecto.                                                                          |
+| `.gitattributes`                                    | LF en todo el repo, binarios marcados.                                                               |
+| `.vscode/settings.json`, `.vscode/extensions.json`  | Editor compartido.                                                                                   |
+| `commitlint.config.mjs`                             | Reglas de los mensajes de commit.                                                                    |
+| `.husky/pre-commit`, `.husky/commit-msg`            | Hooks de git.                                                                                        |
+| `.github/workflows/ci.yml`                          | Verificación automática.                                                                             |
+| `package.json`                                      | Scripts `lint`, `lint:fix`, `format`, `format:check`, `test:ci`; `engines`; config de `lint-staged`. |
+| `README.md`, `docs/ARQUITECTURA.md`, `HISTORIAL.md` | Documentación en español.                                                                            |
+
+**Decisión clave:**
+Los hooks cubren solo los archivos que se están commiteando (`lint-staged`), no
+todo el proyecto. Un pre-commit que tarda 40 segundos termina desactivado por el
+propio desarrollador, y entonces no protege nada.
+
+**Pendiente:** crear el repositorio remoto en GitHub y subir. Requiere la URL o
+el cliente `gh` autenticado.
+
 ### 2026-10-28 — Fase 1: columna vertebral (ventana, hotkey, personaje)
 
 **Tipo:** feature (scaffold)
