@@ -7,6 +7,16 @@ const WINDOW_SIZE = { width: 340, height: 340 };
 const MARGIN = 24;
 
 /**
+ * Permisos que Milo concede.
+ *
+ * La lista es corta a propósito: el micrófono (`media`) es lo único que
+ * necesita. Todo lo demás —notificaciones, geolocalización, portapapeles— se
+ * deniega sin preguntar, porque un compañero de escritorio no tiene por qué
+ * pedirlo.
+ */
+const ALLOWED_PERMISSIONS = new Set<string>(['media']);
+
+/**
  * Franja mínima de la ventana que debe caer dentro de un monitor para
  * considerarla alcanzable. Menos que esto y no hay dónde agarrarla.
  */
@@ -76,6 +86,31 @@ function initialPosition(): Point {
   return reachable ? saved : defaultPosition();
 }
 
+/**
+ * Candado de permisos de la sesión.
+ *
+ * Sin handler, Electron no distingue entre Milo y cualquier otra página: deja
+ * pasar lo que pida el renderer. Aquí se cierra a `media` y solo para la ventana
+ * de Milo, que además es la única de esta sesión.
+ *
+ * Los dos handlers hacen falta. `setPermissionCheckHandler` no sobra: Chromium
+ * consulta el estado del permiso antes de pedirlo, y si esa consulta dice que no,
+ * `getUserMedia` falla sin llegar nunca al handler de petición.
+ */
+function lockPermissions(win: BrowserWindow): void {
+  const contents = win.webContents;
+  const { session } = contents;
+
+  session.setPermissionRequestHandler((requester, permission, callback) => {
+    callback(requester === contents && ALLOWED_PERMISSIONS.has(permission));
+  });
+
+  session.setPermissionCheckHandler(
+    (requester, permission) =>
+      (requester === null || requester === contents) && ALLOWED_PERMISSIONS.has(permission),
+  );
+}
+
 export function createMascotWindow(): BrowserWindow {
   const position = initialPosition();
 
@@ -104,8 +139,16 @@ export function createMascotWindow(): BrowserWindow {
       nodeIntegration: false,
       sandbox: true,
       devTools: process.env['MILOPET_DEV'] === '1',
+      // El VAD late con un `setInterval` de 50 ms. Si el navegador lo frena
+      // porque la ventana quedó tapada por otra aplicación, el VAD no corta
+      // nunca y Milo se queda con el micrófono abierto.
+      backgroundThrottling: false,
     },
   });
+
+  // Antes de cargar la página: el renderer pide el micrófono en cuanto pulsas el
+  // atajo, y el permiso tiene que estar decidido para entonces.
+  lockPermissions(win);
 
   // 'screen-saver' es el único nivel que gana de forma fiable contra apps en
   // pantalla completa (juegos, presentaciones).
