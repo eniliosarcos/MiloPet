@@ -11,7 +11,13 @@
  */
 import { contextBridge, ipcRenderer } from 'electron';
 
-import type { CHANNELS, HotkeyRegistration, MascotState, MiloBridge, MiloConfig } from '../src/shared/ipc';
+import type {
+  CHANNELS,
+  HotkeyRegistration,
+  MascotState,
+  MiloBridge,
+  MiloConfig,
+} from '../src/shared/ipc';
 
 const CH = {
   hotkey: 'milo:hotkey',
@@ -38,7 +44,8 @@ const bridge: MiloBridge = {
 
   getConfig: () => ipcRenderer.invoke(CH.getConfig) as Promise<MiloConfig>,
 
-  setHotkey: (accelerator) => ipcRenderer.invoke(CH.setHotkey, accelerator) as Promise<HotkeyRegistration>,
+  setHotkey: (accelerator) =>
+    ipcRenderer.invoke(CH.setHotkey, accelerator) as Promise<HotkeyRegistration>,
 
   setState: (state: MascotState) => ipcRenderer.send(CH.state, state),
 
