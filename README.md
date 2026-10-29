@@ -1,99 +1,95 @@
 # MiloPet
 
-A desktop companion that listens when you press a hotkey, understands what you
-say, and does small things for you. Think Clippy, minus the interruptions.
+Un compañero de escritorio que te escucha cuando presionas un atajo, entiende lo
+que dices y hace pequeñas cosas por ti. Un Clippy, pero sin interrumpir.
 
-Angular renders the character. Electron owns the window, the global hotkey and
-every privileged action. The renderer never touches Node.
+Angular dibuja al personaje. Electron es dueño de la ventana, del atajo global y
+de toda acción privilegiada. **El renderer nunca toca Node.**
 
-## Status
+> 📐 Antes de tocar código, lee [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md):
+> explica el flujo completo, el mapa de archivos y las decisiones que no son
+> obvias. El registro de cambios está en [`HISTORIAL.md`](HISTORIAL.md).
 
-Phase 1 of 5 — the spine. What works today:
+## Estado: fase 1 de 5
 
-- Transparent, frameless, always-on-top window anchored to the bottom-right.
-- Click-through everywhere except the mascot's hotspot.
-- Global push-to-talk hotkey (`Ctrl+Shift+Space` by default) with conflict detection.
-- State machine: `idle → listening → thinking → acting → idle`, driving both the
-  character and the text bubble.
+Lo que ya funciona:
 
-What is stubbed:
+- Ventana transparente, sin marco, always-on-top, anclada abajo a la derecha.
+- Click-through en todo el área excepto sobre el personaje (no bloquea tu trabajo).
+- Atajo global `Ctrl+Shift+Space` con detección de conflicto.
+- Máquina de estados `idle → listening → thinking → acting → idle`, que mueve
+  tanto al personaje como a la burbuja de texto.
 
-- No microphone yet. The `listening` state is a `setTimeout`, not audio capture.
-- No brain. The bubble shows a canned message.
+Lo que **todavía es simulado**:
 
-## Requirements
+- No hay micrófono. El estado `listening` es un `setTimeout`.
+- No hay cerebro. La burbuja muestra un mensaje fijo.
 
-- Node **22.22.3+** (`nvm use` picks up `.nvmrc`). Angular 22 will not run on Node 20.
-- Windows 10/11 for the packaging target.
+## Requisitos
 
-## Run it
+- Node **22.22.3+** (`nvm use` lee el `.nvmrc`). Angular 22 no corre en Node 20.
+- Windows 10/11 para el empaquetado.
+
+## Ejecutar
 
 ```bash
 npm install
 npm run dev
 ```
 
-> If `npm install` finishes suspiciously fast and `node_modules/electron/dist/`
-> is missing, the Electron binary download was skipped. Fix it with:
-> `node node_modules/electron/install.js`
+`npm run dev` levanta el servidor de desarrollo de Angular y Electron juntos.
+Todo lo que edites en `src/` se recarga en caliente dentro de la ventana.
 
-`npm run dev` starts the Angular dev server and Electron together. Edit anything
-under `src/` and it hot-reloads inside the window.
+> Si `npm install` termina sospechosamente rápido y no existe
+> `node_modules/electron/dist/`, se saltó la descarga del binario de Electron.
+> Resuélvelo con: `node node_modules/electron/install.js`
 
-If you only want to iterate on the character:
+Si solo quieres pulir al personaje, sin Electron:
 
 ```bash
 npm run dev:web
 ```
 
-Open <http://localhost:4200> in Chrome. The bridge falls back to a browser
-stand-in, so `Ctrl+Shift+Space` still drives the state machine.
+Abre <http://localhost:4200> en Chrome. El puente cae a un sustituto de
+navegador, así que `Ctrl+Shift+Space` sigue moviendo la máquina de estados.
 
-> Changes under `electron/` require restarting `npm run dev` — the main process
-> is compiled once, not watched. Use the VS Code launch config for breakpoints.
+> Los cambios en `electron/` requieren reiniciar `npm run dev`: el proceso main
+> se compila una vez, no está en watch. Para breakpoints usa la configuración de
+> VS Code incluida.
 
-## Other scripts
+## Scripts
 
-| Script | What it does |
-| --- | --- |
-| `npm run build` | Compiles Electron to `dist-electron/` and the Angular app to `dist/`. |
-| `npm run preview` | Builds, then runs the real production window. |
-| `npm run package` | Builds and produces a Windows NSIS installer in `release/`. |
-| `npm run test` | Unit tests (Vitest). |
-| `npm run typecheck` | Type-checks the Electron side and builds the renderer. |
+| Comando             | Qué hace                                                 |
+| ------------------- | -------------------------------------------------------- |
+| `npm run dev`       | Angular + Electron con recarga en caliente.              |
+| `npm run dev:web`   | Solo Angular en Chrome.                                  |
+| `npm run build`     | Compila Electron a `dist-electron/` y Angular a `dist/`. |
+| `npm run preview`   | Compila y abre la ventana de producción real.            |
+| `npm run package`   | Genera el instalador NSIS en `release/`.                 |
+| `npm run lint`      | ESLint sobre renderer y proceso main.                    |
+| `npm run test`      | Tests unitarios (Vitest).                                |
+| `npm run typecheck` | Type-check de Electron + build del renderer.             |
+| `npm run format`    | Prettier sobre todo el proyecto.                         |
 
-## Layout
+## Estructura
 
 ```
-electron/
-  main.ts      app lifecycle, IPC handlers
-  window.ts    the mascot window (transparency, always-on-top, click-through)
-  hotkey.ts    global shortcut registration and conflict reporting
-  config.ts    settings in userData/config.json
-  preload.ts   the only API the renderer can see
-src/
-  shared/ipc.ts        the main <-> renderer contract (types + channel names)
-  app/core/milo/       MILO injection token + browser fallback
-  app/features/mascot/ SVG body, states, animations
-  app/features/bubble/ text output
+electron/          proceso main: ventana, atajo global, IPC, ajustes
+src/shared/        contrato main ↔ renderer (tipos + canales)
+src/app/core/      token MILO + sustituto para navegador
+src/app/features/  mascota (SVG) y burbuja de texto
+docs/              arquitectura
 ```
 
-`src/shared/ipc.ts` is the single source of truth. Changing a channel name there
-breaks the build on both sides, which is the point.
+## Convenciones
 
-## Phases
+- **Commits:** [Conventional Commits](https://www.conventionalcommits.org/)
+  (`feat:`, `fix:`, `chore:`…). Hay un hook que los valida.
+- **Formato:** Prettier al guardar (config incluida en `.vscode/settings.json`).
+- **Líneas:** LF en todo el repo (`.gitattributes`), aunque estés en Windows.
 
-1. **Spine** ← you are here. Window, hotkey, state machine.
-2. **Voice.** `getUserMedia` + `MediaRecorder`, VAD auto-stop, STT provider
-   (Groq Whisper in dev, `whisper.cpp` for offline).
-3. **Brain.** `Brain` interface, constrained JSON output, intent router,
-   an alias table that learns your vocabulary.
-4. **Actions.** `app.open`, `web.search`, `timer.set`, `media.*`, `note` behind
-   an explicit allowlist.
-5. **Context.** Active window via UI Automation, on-demand screen summaries.
+## Reglas que no se negocian
 
-## Rules that are not negotiable
-
-- API keys live in the **main process only**, encrypted with `safeStorage`.
-- The model never generates a shell command. It picks from a closed action catalog.
+- Las API keys viven **solo en el proceso main**, cifradas con `safeStorage`.
+- El modelo nunca genera comandos de shell: elige de un catálogo cerrado.
 - `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`.
