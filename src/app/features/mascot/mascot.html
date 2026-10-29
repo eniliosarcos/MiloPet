@@ -40,7 +40,7 @@
            barre la mirada; `.mascot__eyes` desplaza el conjunto y, cuando el
            cursor está cerca, lo inclina hacia él (`translate` inline). -->
       <g class="mascot__eyes" [style.translate]="gazeOffset()">
-        <g class="mascot__eye mascot__eye--left">
+        <g class="mascot__eye mascot__eye--left" [style.scale]="eyeScale().left">
           <ellipse
             class="mascot__eye-shape mascot__eye-shape--calm"
             cx="80"
@@ -53,7 +53,7 @@
             d="M62 95 C73 90 89 94 98 102 C94 120 79 126 69 119 C61 113 58 103 62 95 Z"
           />
         </g>
-        <g class="mascot__eye mascot__eye--right">
+        <g class="mascot__eye mascot__eye--right" [style.scale]="eyeScale().right">
           <ellipse
             class="mascot__eye-shape mascot__eye-shape--calm"
             cx="120"

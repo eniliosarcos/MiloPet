@@ -72,13 +72,16 @@
     translate 700ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-// Cada ojo es una forma blanca. Dos animaciones conviven sin pisarse porque
-// atacan propiedades distintas: `blink` usa `transform` y `glance` usa
-// `translate` (propiedad individual), que se aplica antes del transform.
+// Cada ojo es una forma blanca. Tres movimientos conviven sin pisarse porque
+// atacan propiedades distintas: `blink` usa `transform`, `glance` usa
+// `translate` y la perspectiva de la mirada usa `scale`. Las dos últimas son
+// propiedades individuales: se aplican antes del transform y se multiplican con
+// lo que haga el grupo `.mascot__eyes`.
 .mascot__eye {
   fill: #f8fafc;
   transform-box: fill-box;
   transform-origin: center;
+  transition: scale 420ms cubic-bezier(0.4, 0, 0.2, 1);
   animation:
     blink 6.5s infinite,
     glance 9s ease-in-out infinite;

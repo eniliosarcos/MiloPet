@@ -112,6 +112,17 @@ describe('Mascot', () => {
     expect(offset()).toEqual([0, 0]);
   });
 
+  it('encoge el ojo que queda lejos de la mirada, no el otro', () => {
+    movePointer(EYE_X + 80, EYE_Y);
+
+    const left = fixture.nativeElement.querySelector('.mascot__eye--left') as SVGGElement;
+    const right = fixture.nativeElement.querySelector('.mascot__eye--right') as SVGGElement;
+
+    // Mirando a la derecha, el izquierdo es el que se aleja del cursor.
+    expect(Number.parseFloat(left.style.scale)).toBeLessThan(1);
+    expect(Number.parseFloat(right.style.scale)).toBe(1);
+  });
+
   it('no sigue un cursor lejano: vuelve al barrido automático', () => {
     movePointer(EYE_X + RECT.width, EYE_Y);
 

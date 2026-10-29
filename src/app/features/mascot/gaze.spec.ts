@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { GAZE_DEADZONE, GAZE_RANGE, gazeToward } from './gaze';
+import { GAZE_DEADZONE, GAZE_FAR_SCALE, GAZE_RANGE, eyeScales, gazeToward } from './gaze';
 
 /** Lado del personaje ya renderizado, en píxeles. */
 const SIZE = 240;
@@ -46,5 +46,35 @@ describe('gazeToward', () => {
 
   it('suelta la mirada cuando el cursor sale del alcance', () => {
     expect(gazeToward(SIZE * GAZE_RANGE + 1, 0, SIZE, null)).toBeNull();
+  });
+});
+
+describe('eyeScales', () => {
+  it('sin mirada, los dos ojos quedan en su tamaño de reposo', () => {
+    expect(eyeScales(null)).toEqual({ left: 1, right: 1 });
+    expect(eyeScales({ x: 0, y: 0 })).toEqual({ left: 1, right: 1 });
+  });
+
+  it('encoge el ojo que queda al lado contrario de la mirada', () => {
+    // Mirando a la derecha, el izquierdo es el que se aleja del cursor.
+    const lookRight = eyeScales({ x: 1, y: 0 });
+
+    expect(lookRight.left).toBeCloseTo(1 - GAZE_FAR_SCALE, 10);
+    expect(lookRight.right).toBe(1);
+  });
+
+  it('es simétrico y nunca encoge más que el factor máximo', () => {
+    const lookLeft = eyeScales({ x: -1, y: 0 });
+    const lookRight = eyeScales({ x: 1, y: 0 });
+
+    expect(lookLeft.right).toBeCloseTo(lookRight.left, 10);
+    expect(lookLeft.left).toBe(1);
+    expect(lookRight.left).toBeGreaterThanOrEqual(1 - GAZE_FAR_SCALE);
+  });
+
+  it('encoge de forma proporcional: media mirada, medio encogimiento', () => {
+    const half = eyeScales({ x: 0.5, y: 0 });
+
+    expect(half.left).toBeCloseTo(1 - GAZE_FAR_SCALE / 2, 10);
   });
 });

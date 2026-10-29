@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 
 import type { MascotState } from '../../../shared/ipc';
-import { GAZE_MAX, GAZE_VERTICAL, gazeToward, type Gaze } from './gaze';
+import { GAZE_MAX, GAZE_VERTICAL, eyeScales, gazeToward, type Gaze } from './gaze';
 
 /**
  * El cuerpo de Milo, dibujado entero en código.
@@ -51,6 +51,13 @@ export class Mascot {
     const y = (gaze.y * GAZE_MAX * GAZE_VERTICAL).toFixed(2);
     return `${x}px ${y}px`;
   });
+
+  /**
+   * El ojo que queda detrás de la mirada se encoge un poco. Es la única nota de
+   * volumen que puede dar un dibujo plano: sin ella el giro parece un
+   * desplazamiento, no una cara que se vuelve.
+   */
+  protected readonly eyeScale = computed(() => eyeScales(this.gaze()));
 
   /**
    * La ventana es click-through, pero `setIgnoreMouseEvents(true, { forward:
