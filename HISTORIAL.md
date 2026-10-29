@@ -8,13 +8,15 @@ Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 
 ## Historial
 
-### 2026-10-29 — El ojo que apunta al cursor se encoge · feat
+### 2026-10-29 — La mirada da volumen a la pareja de ojos · feat
 
-**Qué:** Mientras los ojos siguen al cursor, el ojo que queda hacia ese lado pierde hasta un 10 % de tamaño, con transición de 420 ms.
+**Qué:** Al seguir al cursor, el ojo hacia el que mira pierde un 12 % de tamaño y el otro gana un 5 %, con transición de 420 ms.
 **Por qué:** los dos ojos se desplazaban igual y el gesto se leía como un desplazamiento plano, no como una cara que se vuelve.
 **Tocó:** `src/app/features/mascot/gaze.ts`, `mascot.ts`, `mascot.html`, `mascot.scss`, tests.
-**Aprendido:** `scale` es una propiedad individual y se multiplica con el `transform` del parpadeo y el `translate` del barrido, así que añade volumen sin tocar las animaciones existentes; la escala depende de la dirección (`gaze.x`), no de la distancia. Se encoge el ojo del lado al que mira: la primera versión encogía el contrario y el giro se leía al revés.
-**Commits:** `e7131be..e524003`
+**Aprendido:** `scale` es propiedad individual y se multiplica con el `transform` del parpadeo y el `translate` del barrido sin pisarlos. Medido en Chromium 156: `scale` en un `<g>` de SVG es uniforme y respeta `transform-box: fill-box`, así que el problema no era deformación sino magnitud (10 % en un ojo de 44 px son 4 px, invisibles) y encoger un solo ojo, que descuadra la pareja.
+**Commits:** `e7131be..135931e`
+
+### 2026-10-29 — La mirada vuelve al centro despacio · fix
 
 ### 2026-10-29 — La mirada vuelve al centro despacio · fix
 
