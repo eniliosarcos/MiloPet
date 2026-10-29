@@ -72,7 +72,7 @@ métodos que `preload.ts` decidió publicar.
 | `src/app/features/mascot/`         | El cuerpo: SVG + estados + animaciones + mirada que sigue al cursor.            |
 | `src/app/features/bubble/`         | La burbuja de texto.                                                            |
 
-## Las siete decisiones que no son obvias
+## Las ocho decisiones que no son obvias
 
 Cada una existe por un bug concreto que ya nos costó tiempo.
 
@@ -219,6 +219,19 @@ lo que falta, que es un filtro exponencial: continuo y con el mismo retardo a
 cualquier frecuencia de ratón. La contrapartida es el retardo (≈100 ms), del
 orden de la latencia de la persecución visual humana; subir la duración lo hace
 más lento y bajarla lo acerca a un tic.
+
+**8. La animación de `acting` se rehace en la fase 3, no antes.**
+Hoy `acting` dura 3,2 s fijos porque el texto es de mentira, y lo que se mueve es
+un `bounce` `infinite` de 620 ms más la boca abierta. Ese `infinite` es lo que
+permite aparcarla: la animación no depende de la duración, así que no se rompe
+cuando el estado pase a durar lo que dure la respuesta. Rehacerla ahora sería
+afinarla contra una ventana de tiempo que todavía no existe, y la fase 3 la
+redefine: texto de longitud variable y, si hay voz, una boca movida por amplitud
+de audio en vez de por `transform` en CSS. Queda como deuda consciente, no como
+olvido, y no bloquea el resto de fases.
+
+Disparador para retomarla: que exista una duración real de `acting` y se sepa si
+habrá TTS.
 
 ## Qué está simulado (no confundir con real)
 
