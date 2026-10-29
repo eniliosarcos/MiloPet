@@ -1,0 +1,47 @@
+<svg class="mascot" viewBox="0 0 200 200" [attr.data-state]="state()" aria-hidden="true">
+  <defs>
+    <radialGradient id="miloBody" cx="38%" cy="28%" r="78%">
+      <stop offset="0%" stop-color="#a7f3d0" />
+      <stop offset="55%" stop-color="#5eead4" />
+      <stop offset="100%" stop-color="#2dd4bf" />
+    </radialGradient>
+    <radialGradient id="miloCheek" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fb7185" stop-opacity="0.55" />
+      <stop offset="100%" stop-color="#fb7185" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <ellipse class="mascot__shadow" cx="100" cy="180" rx="42" ry="7" />
+  <circle class="mascot__pulse" cx="100" cy="116" r="72" />
+
+  <g class="mascot__body">
+    <path
+      class="mascot__ear mascot__ear--left"
+      d="M56 78 C48 44 62 30 78 52 Z"
+    />
+    <path
+      class="mascot__ear mascot__ear--right"
+      d="M144 78 C152 44 138 30 122 52 Z"
+    />
+
+    <ellipse class="mascot__torso" cx="100" cy="116" rx="62" ry="56" fill="url(#miloBody)" />
+
+    <g class="mascot__face">
+      <g class="mascot__eye mascot__eye--left">
+        <ellipse class="mascot__sclera" cx="80" cy="108" rx="17" ry="19" />
+        <circle class="mascot__pupil" cx="80" cy="108" r="8.5" />
+        <circle class="mascot__spark" cx="84" cy="103" r="2.6" />
+      </g>
+      <g class="mascot__eye mascot__eye--right">
+        <ellipse class="mascot__sclera" cx="120" cy="108" rx="17" ry="19" />
+        <circle class="mascot__pupil" cx="120" cy="108" r="8.5" />
+        <circle class="mascot__spark" cx="124" cy="103" r="2.6" />
+      </g>
+
+      <ellipse class="mascot__cheek" cx="58" cy="130" rx="13" ry="9" fill="url(#miloCheek)" />
+      <ellipse class="mascot__cheek" cx="142" cy="130" rx="13" ry="9" fill="url(#miloCheek)" />
+
+      <path class="mascot__mouth" d="M90 142 Q100 152 110 142" />
+    </g>
+  </g>
+</svg>

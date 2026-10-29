@@ -1,0 +1,11 @@
+<main class="stage" [attr.data-state]="state()">
+  <div class="stage__bubble">
+    @if (message()) {
+      <app-bubble [text]="message()" [tone]="tone()" />
+    }
+  </div>
+
+  <div class="hotspot" data-interactive></div>
+
+  <app-mascot class="stage__mascot" [state]="state()" />
+</main>

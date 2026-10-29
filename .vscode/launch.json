@@ -1,0 +1,44 @@
+{
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // Fastest loop for the mascot itself: full HMR, no Electron boot.
+      // The bridge falls back to a browser stand-in, so Ctrl+Shift+Space works.
+      "name": "Mascot in Chrome (ng serve)",
+      "type": "chrome",
+      "request": "launch",
+      "preLaunchTask": "npm: dev:web",
+      "url": "http://localhost:4200/",
+      "webRoot": "${workspaceFolder}"
+    },
+    {
+      // Breakpoints in electron/main.ts. Requires `npm run build:electron` first
+      // and the Angular dev server running (npm run dev:web).
+      "name": "Electron: main process",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/electron/dist/electron.exe",
+      "runtimeArgs": [".", "--remote-debugging-port=9222"],
+      "env": { "MILOPET_DEV": "1" },
+      "preLaunchTask": "npm: build:electron",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      // Breakpoints in the renderer, attached to the running Electron window.
+      "name": "Electron: renderer",
+      "type": "chrome",
+      "request": "attach",
+      "port": 9222,
+      "webRoot": "${workspaceFolder}"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Electron: main + renderer",
+      "configurations": ["Electron: main process", "Electron: renderer"]
+    }
+  ]
+}

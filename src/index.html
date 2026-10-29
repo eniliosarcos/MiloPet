@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MiloPet</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!--
+    Everything Milo loads is local and shipped with the app. 'unsafe-inline' is
+    required for styles because Angular injects component CSS at runtime; scripts
+    get no such exemption.
+  -->
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self' file:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data:; font-src 'self' file:; connect-src 'self' file: ws://localhost:4200 http://localhost:4200"
+  >
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+</head>
+<body>
+  <app-root></app-root>
+</body>
+</html>

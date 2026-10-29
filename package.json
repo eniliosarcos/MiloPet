@@ -1,0 +1,46 @@
+{
+  "name": "milo-pet",
+  "version": "0.1.0",
+  "description": "MiloPet - a desktop companion that listens, understands and does things for you.",
+  "main": "dist-electron/electron/main.js",
+  "scripts": {
+    "ng": "ng",
+    "start": "npm run dev",
+    "dev": "concurrently -k -n web,milo -c cyan,magenta \"npm:dev:web\" \"npm:dev:milo\"",
+    "dev:web": "ng serve",
+    "dev:milo": "npm run build:electron && wait-on tcp:4200 && cross-env MILOPET_DEV=1 electron .",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "build": "npm run build:electron && ng build",
+    "preview": "npm run build && cross-env MILOPET_DEV=0 electron .",
+    "package": "npm run build && electron-builder",
+    "test": "ng test",
+    "typecheck": "tsc -p tsconfig.electron.json --noEmit && ng build --configuration development"
+  },
+  "private": true,
+  "packageManager": "npm@10.9.8",
+  "dependencies": {
+    "@angular/common": "^22.2.0",
+    "@angular/compiler": "^22.2.0",
+    "@angular/core": "^22.2.0",
+    "@angular/forms": "^22.2.0",
+    "@angular/platform-browser": "^22.2.0",
+    "@angular/router": "^22.2.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.2.5",
+    "@angular/cli": "^22.2.5",
+    "@angular/compiler-cli": "^22.2.0",
+    "@types/node": "^22.20.5",
+    "concurrently": "^10.0.6",
+    "cross-env": "^10.1.0",
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0",
+    "jsdom": "^30.0.0",
+    "prettier": "^3.8.1",
+    "typescript": "~6.0.2",
+    "vitest": "^5.0.0",
+    "wait-on": "^9.5.1"
+  }
+}
