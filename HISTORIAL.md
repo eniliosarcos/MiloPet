@@ -8,6 +8,14 @@ Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 
 ## Historial
 
+### 2026-10-29 — El arrastre pasa por IPC y desaparece la franja muerta · feat
+
+**Qué:** Todo el hotspot arrastra la ventana por tres canales (`dragStart`, `dragMove`, `dragEnd`); el main relee `screen.getCursorScreenPoint()` y mueve con el delta desde el origen, y la posición se guarda una sola vez al soltar.
+**Por qué:** `app-region: drag` ignoraba los eventos de puntero, así que el anillo de 14 px que desbloqueaba los clics no arrastraba: el cursor prometía `grab` y el gesto no respondía.
+**Tocó:** `src/shared/ipc.ts`, `electron/preload.ts`, `electron/window.ts`, `electron/main.ts`, `src/app/app.ts`, `app.html`, `app.scss`, `app.spec.ts`, `core/milo/milo-bridge.ts`, `docs/ARQUITECTURA.md`, `docs/RECORRIDO-DEL-CODIGO.md`.
+**Aprendido:** `getCursorScreenPoint()` y los bounds de la ventana son DIP, así que el `scaleFactor` que la nota anterior daba por obligatorio sobra mientras las coordenadas no crucen IPC; y `moved` deja de servir para guardar porque `setPosition` puede dispararlo en cada paso.
+**Commits:** `0fadf92`
+
 ### 2026-10-29 - Zonas: anillo de 14 px, alcance dentro de la ventana y marco del mundo · fix
 
 **Qué:** El anillo del arrastre pasa a 14 px y el hotspot a 115×71 px, `GAZE_RANGE` baja a 0,42 para que el círculo de la mirada quepa entero, y el modo dev pinta el borde de la ventana en violeta con su tamaño en píxeles.
