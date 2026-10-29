@@ -13,6 +13,15 @@ import { MILO } from './core/milo/milo-bridge';
 import { Bubble, type BubbleTone } from './features/bubble/bubble';
 import { Mascot } from './features/mascot/mascot';
 
+/** Cuánto tiempo de lectura tiene el mensaje después de volver a `idle`. */
+const BUBBLE_VISIBLE_MS = 4000;
+
+/**
+ * Duración del desvanecido. Debe coincidir con la animación `bubble-out` de
+ * `features/bubble/bubble.scss`: si cambias una, cambia la otra.
+ */
+const BUBBLE_FADE_MS = 420;
+
 /**
  * Orquesta todo el bucle de interacción.
  *
@@ -32,6 +41,8 @@ export class App {
   private readonly destroyRef = inject(DestroyRef);
   /** Timers pendientes, para poder cancelarlos si el componente se destruye. */
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
+  /** Timer del desvanecido en curso, para poder cancelarlo si el usuario cierra antes. */
+  private fadeTimer: ReturnType<typeof setTimeout> | undefined;
   private interactive = false;
   /** Evita que una segunda pulsación del atajo pise una interacción en curso. */
   private busy = false;
@@ -39,6 +50,7 @@ export class App {
   protected readonly state = signal<MascotState>('idle');
   protected readonly message = signal('');
   protected readonly tone = signal<BubbleTone>('neutral');
+  protected readonly leaving = signal(false);
 
   constructor() {
     const stopHotkey = this.milo.onHotkey(() => this.runInteractionLoop());
@@ -79,7 +91,11 @@ export class App {
   private runInteractionLoop(): void {
     if (this.busy) return;
     this.busy = true;
+    // Una interacción nueva manda: se lleva por delante el mensaje anterior
+    // aunque estuviera a medio desvanecer.
+    this.cancelFade();
     this.message.set('');
+    this.leaving.set(false);
     this.tone.set('neutral');
     this.state.set('listening');
 
@@ -96,9 +112,48 @@ export class App {
         this.after(3200, () => {
           this.state.set('idle');
           this.busy = false;
+          this.scheduleDismiss();
         });
       });
     });
+  }
+
+  /**
+   * Da unos segundos de lectura y luego desvanece la burbuja.
+   *
+   * El reloj arranca al volver a `idle`, no al aparecer el texto: así el usuario
+   * siempre tiene el mismo tiempo de lectura, sin importar cuánto dure la
+   * animación de `acting`. Cuando la fase 3 devuelva respuestas largas, este es
+   * el sitio para calcular el tiempo según la longitud del texto.
+   */
+  private scheduleDismiss(): void {
+    this.fadeTimer = this.after(BUBBLE_VISIBLE_MS, () => this.startFade());
+  }
+
+  /** El usuario pulsó la (x): no esperamos los cuatro segundos de cortesía. */
+  protected closeBubble(): void {
+    // Si ya se está desvaneciendo, dejamos que termine: reiniciar el timer
+    // dejaría el mensaje huérfano en pantalla.
+    if (this.leaving()) return;
+    this.cancelFade();
+    this.startFade();
+  }
+
+  private startFade(): void {
+    if (!this.message() || this.leaving()) return;
+    this.leaving.set(true);
+    this.fadeTimer = this.after(BUBBLE_FADE_MS, () => {
+      this.message.set('');
+      this.leaving.set(false);
+      this.fadeTimer = undefined;
+    });
+  }
+
+  private cancelFade(): void {
+    if (this.fadeTimer === undefined) return;
+    clearTimeout(this.fadeTimer);
+    this.timers.delete(this.fadeTimer);
+    this.fadeTimer = undefined;
   }
 
   private reportHotkeyFailure(failure: HotkeyRegistration): void {
@@ -115,12 +170,15 @@ export class App {
   /**
    * `setTimeout` con registro: guarda el id para poder cancelarlo al destruir el
    * componente y se olvida de él cuando ya se ejecutó, para que el Set no crezca.
+   *
+   * Devuelve el id para que quien lo pidió pueda cancelarlo antes de tiempo.
    */
-  private after(delay: number, action: () => void): void {
+  private after(delay: number, action: () => void): ReturnType<typeof setTimeout> {
     const timer = setTimeout(() => {
       this.timers.delete(timer);
       action();
     }, delay);
     this.timers.add(timer);
+    return timer;
   }
 }

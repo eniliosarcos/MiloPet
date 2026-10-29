@@ -1,3 +1,20 @@
-<div class="bubble" [attr.data-tone]="tone()" role="status" aria-live="polite">
-  {{ text() }}
+<!--
+  El envoltorio lleva `data-interactive` porque, sin él, el botón de cerrar no
+  recibiría clics en Electron: la ventana es click-through y solo acepta ratón
+  donde `elementFromPoint` encuentra este atributo (ver `app.ts`).
+-->
+<div class="bubble-wrap" [class.bubble-wrap--leaving]="leaving()" data-interactive>
+  <div class="bubble" [attr.data-tone]="tone()" role="status" aria-live="polite">
+    {{ text() }}
+  </div>
+
+  <button
+    type="button"
+    class="bubble__close"
+    title="Cerrar mensaje"
+    aria-label="Cerrar mensaje"
+    (click)="dismiss.emit()"
+  >
+    ×
+  </button>
 </div>

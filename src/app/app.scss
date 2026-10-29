@@ -22,7 +22,9 @@
 
 .stage__bubble {
   position: absolute;
-  top: 6px;
+  // 12px en vez de 6: el botón de cerrar sobresale 7px por encima de la burbuja
+  // y no debe quedar cortado por el borde de la ventana.
+  top: 12px;
   left: 0;
   right: 0;
   display: flex;
@@ -33,12 +35,15 @@
 }
 
 /**
- * La única región que recibe clics. Todo lo que queda fuera sigue siendo
- * click-through, así que Milo nunca bloquea el trabajo real.
+ * Las dos únicas regiones que reciben clics en Electron, porque son las que
+ * llevan `[data-interactive]`:
  *
- * El resto de la app tiene `pointer-events: none`; solo este elemento lo vuelve
- * a activar. `app.ts` comprueba con `elementFromPoint` si el cursor está aquí
- * para avisarle al proceso main.
+ *   - la burbuja (`features/bubble/bubble.html`), para que funcione la (x);
+ *   - `.hotspot`, aquí abajo, para el personaje.
+ *
+ * Todo lo demás sigue siendo click-through, así que Milo nunca bloquea el
+ * trabajo real. `app.ts` comprueba con `elementFromPoint` si el cursor está en
+ * una de ellas para avisarle al proceso main.
  */
 .hotspot {
   position: absolute;

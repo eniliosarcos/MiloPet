@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 /**
  * Los tonos que entiende la burbuja. Se modelan como unión de literales, no como
@@ -17,4 +17,8 @@ export class Bubble {
   /** `required`: no existe una burbuja vacía. Quien la usa debe pasar texto. */
   readonly text = input.required<string>();
   readonly tone = input<BubbleTone>('neutral');
+  /** Mientras es true, la burbuja se está desvaneciendo. El padre la retira al acabar. */
+  readonly leaving = input(false);
+  /** El usuario pidió cerrarla antes de que se desvanezca sola. */
+  readonly dismiss = output<void>();
 }

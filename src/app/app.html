@@ -6,7 +6,12 @@
   <!-- La burbuja solo existe cuando hay algo que decir: nunca se ve vacía. -->
   <div class="stage__bubble">
     @if (message()) {
-      <app-bubble [text]="message()" [tone]="tone()" />
+      <app-bubble
+        [text]="message()"
+        [tone]="tone()"
+        [leaving]="leaving()"
+        (dismiss)="closeBubble()"
+      />
     }
   </div>
 
