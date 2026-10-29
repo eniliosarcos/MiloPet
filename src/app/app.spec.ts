@@ -4,7 +4,13 @@ import type { MiloBridge } from '../shared/ipc';
 import { App } from './app';
 import { MILO } from './core/milo/milo-bridge';
 
-/** Minimal stand-in for the Electron bridge, so the state machine is testable. */
+/**
+ * Sustituto mínimo del puente de Electron, para poder probar la máquina de
+ * estados sin abrir una ventana real.
+ *
+ * `onHotkey` guarda el handler y lo expone como `pressHotkey`, así el test puede
+ * simular la pulsación del atajo global desde dentro.
+ */
 function createFakeBridge() {
   let press: (() => void) | null = null;
 
@@ -19,7 +25,7 @@ function createFakeBridge() {
       return () => undefined;
     },
     setInteractive() {
-      /* noop */
+      /* sin efecto */
     },
     async getConfig() {
       return { hotkey: 'CommandOrControl+Shift+Space' };
@@ -28,10 +34,10 @@ function createFakeBridge() {
       return { ok: true, accelerator };
     },
     setState() {
-      /* noop */
+      /* sin efecto */
     },
     quit() {
-      /* noop */
+      /* sin efecto */
     },
   };
 
@@ -46,11 +52,13 @@ describe('App', () => {
 
     await TestBed.configureTestingModule({
       imports: [App],
+      // El token MILO se reemplaza por el falso: la app no sabe que no hay
+      // Electron detrás.
       providers: [{ provide: MILO, useValue: fake.bridge }],
     }).compileComponents();
   });
 
-  it('renders the mascot in its idle state', () => {
+  it('dibuja al personaje en estado idle', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
 
@@ -59,7 +67,7 @@ describe('App', () => {
     expect(fixture.nativeElement.querySelector('app-mascot')).toBeTruthy();
   });
 
-  it('starts listening when the hotkey fires', () => {
+  it('empieza a escuchar cuando se dispara el atajo', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
 

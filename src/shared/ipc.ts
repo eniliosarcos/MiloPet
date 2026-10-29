@@ -1,41 +1,41 @@
 /**
- * The contract between the Electron main process and the Angular renderer.
+ * El contrato entre el proceso main de Electron y el renderer de Angular.
  *
- * This file is compiled twice: once inside the Angular app, and once inside the
- * Electron build (see tsconfig.electron.json). It must stay dependency-free and
- * contain nothing but types and plain constants.
+ * Este archivo se compila dos veces: una dentro de la app de Angular y otra
+ * dentro del build de Electron (ver tsconfig.electron.json). Por eso debe
+ * quedarse sin dependencias y contener solo tipos y constantes simples.
  */
 
-/** IPC channel names. Single source of truth, so typos are compile errors. */
+/** Nombres de los canales IPC. Fuente única de verdad: un error de tipeo no compila. */
 export const CHANNELS = {
-  /** main -> renderer: the global push-to-talk hotkey was pressed. */
+  /** main -> renderer: se pulsó el atajo global de push-to-talk. */
   hotkey: 'milo:hotkey',
-  /** main -> renderer: the requested accelerator could not be registered. */
+  /** main -> renderer: no se pudo registrar el atajo pedido. */
   hotkeyFailed: 'milo:hotkey-failed',
-  /** renderer -> main: allow or block mouse events on the mascot window. */
+  /** renderer -> main: permite o bloquea los eventos de ratón en la ventana. */
   setInteractive: 'milo:set-interactive',
-  /** renderer -> main: reply to the getConfig call. */
+  /** renderer -> main: pide la configuración guardada. */
   getConfig: 'milo:get-config',
-  /** renderer -> main: persist a new hotkey and re-register it. */
+  /** renderer -> main: guarda un atajo nuevo y lo vuelve a registrar. */
   setHotkey: 'milo:set-hotkey',
-  /** renderer -> main: report the current mascot state (used for logging). */
+  /** renderer -> main: informa el estado actual (se usa para trazas y logs). */
   state: 'milo:state',
-  /** renderer -> main: quit the app. */
+  /** renderer -> main: cierra la aplicación. */
   quit: 'milo:quit',
 } as const;
 
-/** What Milo is doing right now. Drives both the animation and the bubble. */
+/** Qué está haciendo Milo en este momento. Mueve la animación y la burbuja. */
 export type MascotState = 'idle' | 'listening' | 'thinking' | 'acting' | 'error';
 
-/** Persisted settings. Lives in `app.getPath('userData')/config.json`. */
+/** Ajustes que se guardan en `app.getPath('userData')/config.json`. */
 export interface MiloConfig {
   hotkey: string;
 }
 
 /**
- * Result of registering a global shortcut. `register()` returns false when the
- * accelerator is already owned by another process, which is the single most
- * common cause of "the assistant does nothing" bug reports.
+ * Resultado de registrar un atajo global. `register()` devuelve false cuando
+ * otro proceso ya tiene esa combinación, que es la causa más común del reporte
+ * "el asistente no hace nada".
  */
 export interface HotkeyRegistration {
   ok: boolean;
@@ -43,17 +43,17 @@ export interface HotkeyRegistration {
   reason?: 'already-taken' | 'invalid';
 }
 
-/** The API surface exposed to the renderer through the preload script. */
+/** La superficie que el preload expone al renderer. */
 export interface MiloBridge {
-  /** Subscribe to hotkey presses. Returns an unsubscribe function. */
+  /** Se suscribe a las pulsaciones del atajo. Devuelve la función para desuscribirse. */
   onHotkey(handler: () => void): () => void;
 
-  /** Subscribe to hotkey registration failures. */
+  /** Se suscribe a los fallos de registro del atajo. */
   onHotkeyFailed(handler: (failure: HotkeyRegistration) => void): () => void;
 
   /**
-   * When false, mouse events pass through the window to whatever is behind it.
-   * Keeps the mascot from stealing clicks from the user's real work.
+   * Con false, los eventos de ratón atraviesan la ventana hacia lo que hay
+   * detrás. Evita que el personaje se robe los clics del trabajo real.
    */
   setInteractive(interactive: boolean): void;
 
@@ -65,5 +65,5 @@ export interface MiloBridge {
   quit(): void;
 }
 
-/** Default accelerator. Chosen to avoid collisions with common Windows apps. */
+/** Atajo por defecto. Elegido para no chocar con apps comunes de Windows. */
 export const DEFAULT_HOTKEY = 'CommandOrControl+Shift+Space';

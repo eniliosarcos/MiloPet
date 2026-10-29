@@ -14,11 +14,11 @@ import { Bubble, type BubbleTone } from './features/bubble/bubble';
 import { Mascot } from './features/mascot/mascot';
 
 /**
- * Orchestrates the whole interaction loop.
+ * Orquesta todo el bucle de interacción.
  *
- * Phase 1 only proves the spine: hotkey -> state machine -> bubble. The voice
- * pipeline replaces the stubbed `setTimeout` chain in phase 2, and the brain
- * replaces the canned message in phase 3.
+ * La fase 1 solo demuestra la columna vertebral: atajo -> máquina de estados ->
+ * burbuja. La fase 2 sustituye la cadena de `setTimeout` por el pipeline de voz,
+ * y la fase 3 sustituye el mensaje fijo por el cerebro.
  */
 @Component({
   selector: 'app-root',
@@ -30,8 +30,10 @@ import { Mascot } from './features/mascot/mascot';
 export class App {
   private readonly milo = inject(MILO);
   private readonly destroyRef = inject(DestroyRef);
+  /** Timers pendientes, para poder cancelarlos si el componente se destruye. */
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
   private interactive = false;
+  /** Evita que una segunda pulsación del atajo pise una interacción en curso. */
   private busy = false;
 
   protected readonly state = signal<MascotState>('idle');
@@ -42,9 +44,13 @@ export class App {
     const stopHotkey = this.milo.onHotkey(() => this.runInteractionLoop());
     const stopFailure = this.milo.onHotkeyFailed((failure) => this.reportHotkeyFailure(failure));
 
-    // Keep the main process in sync. It owns the tray/logging layer later on.
+    // Mantiene al proceso main al día del estado. Allí vivirá la bandeja y el
+    // registro de actividad más adelante. `effect` se vuelve a ejecutar cada vez
+    // que cambia `state()`, sin necesidad de suscripciones manuales.
     effect(() => this.milo.setState(this.state()));
 
+    // Las tres bajas son obligatorias: si no, al destruir el componente quedan
+    // listeners y timers vivos apuntando a una instancia que ya no existe.
     this.destroyRef.onDestroy(() => {
       stopHotkey();
       stopFailure();
@@ -54,14 +60,16 @@ export class App {
   }
 
   /**
-   * The mascot window starts click-through so it never steals a click. We flip
-   * it back on only while the cursor is over the `[data-interactive]` hotspot.
+   * La ventana arranca en click-through para no robar clics. Solo la volvemos
+   * interactiva mientras el cursor está encima del hotspot `[data-interactive]`.
    */
   @HostListener('window:mousemove', ['$event'])
   protected onPointerMove(event: MouseEvent): void {
     const target = document.elementFromPoint(event.clientX, event.clientY);
     const interactive = target?.closest('[data-interactive]') !== null;
 
+    // Solo hablamos con el proceso main cuando el valor cambia: un mousemove
+    // dispara decenas de eventos por segundo y no queremos cruzar IPC en todos.
     if (interactive !== this.interactive) {
       this.interactive = interactive;
       this.milo.setInteractive(interactive);
@@ -75,9 +83,9 @@ export class App {
     this.tone.set('neutral');
     this.state.set('listening');
 
-    // STUB: replaces with capture + VAD + Whisper in phase 2, then with the
-    // intent router in phase 3. The timing is intentionally visible so we can
-    // feel the loop before adding real latency.
+    // SIMULADO: la fase 2 reemplaza esto por captura + VAD + Whisper, y la fase
+    // 3 por el router de intención. Los tiempos son visibles a propósito, para
+    // sentir el bucle antes de añadir latencia real.
     this.after(1500, () => {
       this.state.set('thinking');
       this.after(900, () => {
@@ -104,6 +112,10 @@ export class App {
     });
   }
 
+  /**
+   * `setTimeout` con registro: guarda el id para poder cancelarlo al destruir el
+   * componente y se olvida de él cuando ya se ejecutó, para que el Set no crezca.
+   */
   private after(delay: number, action: () => void): void {
     const timer = setTimeout(() => {
       this.timers.delete(timer);

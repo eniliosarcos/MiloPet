@@ -1,14 +1,16 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="utf-8" />
     <title>MiloPet</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <!--
-    Everything Milo loads is local and shipped with the app. 'unsafe-inline' is
-    required for styles because Angular injects component CSS at runtime; scripts
-    get no such exemption.
+    Todo lo que carga Milo es local y viaja con la app. 'unsafe-inline' hace
+    falta para los estilos porque Angular inyecta el CSS de cada componente en
+    tiempo de ejecución; los scripts no tienen esa excepción.
+    Nota: en el build de producción `baseHref` pasa a "./" (ver angular.json),
+    porque bajo file:// una barra inicial apunta a la raíz del disco.
   -->
     <meta
       http-equiv="Content-Security-Policy"
@@ -17,6 +19,7 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
   </head>
   <body>
+    <!-- Angular reemplaza este elemento por el componente App. -->
     <app-root></app-root>
   </body>
 </html>

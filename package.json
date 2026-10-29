@@ -1,7 +1,7 @@
 {
   "name": "milo-pet",
   "version": "0.1.0",
-  "description": "MiloPet - a desktop companion that listens, understands and does things for you.",
+  "description": "MiloPet - un compañero de escritorio que te escucha, te entiende y hace pequeñas cosas por ti.",
   "main": "dist-electron/electron/main.js",
   "scripts": {
     "ng": "ng",

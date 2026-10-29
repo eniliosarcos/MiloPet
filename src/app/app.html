@@ -1,10 +1,16 @@
+<!--
+  El escenario. `data-state` en el contenedor permite que el CSS reaccione al
+  estado sin que cada hijo tenga que conocerlo.
+-->
 <main class="stage" [attr.data-state]="state()">
+  <!-- La burbuja solo existe cuando hay algo que decir: nunca se ve vacía. -->
   <div class="stage__bubble">
     @if (message()) {
       <app-bubble [text]="message()" [tone]="tone()" />
     }
   </div>
 
+  <!-- La única zona cliqueable de toda la ventana (ver `.hotspot` en app.scss). -->
   <div class="hotspot" data-interactive></div>
 
   <app-mascot class="stage__mascot" [state]="state()" />

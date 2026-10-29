@@ -4,17 +4,20 @@ import type { HotkeyRegistration } from '../src/shared/ipc';
 
 type HotkeyHandler = () => void;
 
+/** Atajo registrado actualmente, para poder darlo de baja antes de registrar otro. */
 let current: string | null = null;
 
 /**
- * Registers the push-to-talk accelerator.
+ * Registra el atajo de push-to-talk.
  *
- * Electron gives us a single boolean: `register()` returns false both when the
- * combination is malformed and when another process already owns it. We can't
- * tell those apart, so we surface the actionable message either way: "that
- * combination is unavailable, pick another one".
+ * Electron solo devuelve un booleano: `register()` da false tanto si la
+ * combinación está mal escrita como si otro proceso ya la tiene. No podemos
+ * distinguirlas, así que mostramos el mensaje accionable en ambos casos:
+ * "esa combinación no está disponible, elige otra".
  */
 export function registerHotkey(accelerator: string, onPress: HotkeyHandler): HotkeyRegistration {
+  // Primero liberamos el anterior: si no, registrar el nuevo lo dejaría vivo y
+  // dos atajos dispararían la misma interacción.
   unregisterHotkey();
 
   if (!accelerator || !accelerator.includes('+')) {

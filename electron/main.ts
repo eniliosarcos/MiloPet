@@ -5,11 +5,11 @@ import { readConfig, writeConfig } from './config';
 import { disposeHotkeys, registerHotkey } from './hotkey';
 import { createMascotWindow, getMascotWindow, sendToRenderer } from './window';
 
-/** Last state reported by the renderer. Placeholder for the tray/logging layer. */
+/** Último estado informado por el renderer. Lo usará la capa de bandeja y logs. */
 let lastState: MascotState = 'idle';
 
-// A desktop companion must be a single instance: two Milos fighting over the
-// same global hotkey is a guaranteed "it only works sometimes" bug.
+// Un compañero de escritorio debe ser una sola instancia: dos Milos peleando
+// por el mismo atajo global garantizan el bug "a veces funciona".
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 }
@@ -28,6 +28,8 @@ function registerIpc(): void {
   ipcMain.handle(CHANNELS.setHotkey, (_event, accelerator: string) => {
     const registration = registerHotkey(accelerator, notifyHotkeyPress);
 
+    // Solo persistimos si el registro funcionó. Guardar un atajo que el sistema
+    // rechazó deja la app arrancando sin atajo en el siguiente inicio.
     if (registration.ok) {
       writeConfig({ hotkey: accelerator });
     }
@@ -37,13 +39,17 @@ function registerIpc(): void {
 
   ipcMain.on(CHANNELS.setInteractive, (_event, interactive: boolean) => {
     const win = getMascotWindow();
-    // `forward: true` keeps sending mousemove to the renderer while it is
-    // click-through, which is what lets the mascot "notice" the cursor.
+    // `forward: true` sigue enviando mousemove al renderer mientras la ventana
+    // es click-through; eso es lo que permite que el personaje "note" el cursor.
     win?.setIgnoreMouseEvents(!interactive, { forward: true });
   });
 
   ipcMain.on(CHANNELS.state, (_event, state: MascotState) => {
     lastState = state;
+    // Traza solo en desarrollo: en producción no queremos ruido en la consola.
+    if (process.env['MILOPET_DEV'] === '1') {
+      console.debug('[milo] estado:', lastState);
+    }
   });
 
   ipcMain.on(CHANNELS.quit, () => app.quit());
@@ -58,14 +64,14 @@ function startHotkey(): void {
   const registration = registerHotkey(hotkey, notifyHotkeyPress);
 
   if (!registration.ok) {
-    // The window may still be loading; the renderer also asks for the config on
-    // boot and re-checks the registration result there.
+    // La ventana puede estar cargando todavía; el renderer también pide la
+    // configuración al arrancar y vuelve a comprobar el registro allí.
     sendToRenderer(CHANNELS.hotkeyFailed, registration);
   }
 }
 
 void app.whenReady().then(() => {
-  // Required for Windows toast notifications later on.
+  // Necesario para las notificaciones toast de Windows más adelante.
   app.setAppUserModelId('com.milopet.app');
   Menu.setApplicationMenu(null);
 
@@ -83,5 +89,6 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+  // Sin esto, el atajo global sigue secuestrado después de cerrar la app.
   disposeHotkeys();
 });

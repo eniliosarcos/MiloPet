@@ -5,11 +5,12 @@ import * as path from 'node:path';
 import { DEFAULT_HOTKEY, type MiloConfig } from '../src/shared/ipc';
 
 /**
- * Settings persistence.
+ * Persistencia de ajustes.
  *
- * Deliberately dumb: a JSON file in the userData folder. The moment we start
- * storing API keys, they must NOT land here in plain text — use
- * `safeStorage.encryptString()` (DPAPI on Windows) or the OS credential store.
+ * A propósito es simple: un JSON en la carpeta de datos de usuario. En el
+ * momento en que empecemos a guardar API keys, NO pueden terminar aquí en
+ * texto plano: hay que usar `safeStorage.encryptString()` (DPAPI en Windows) o
+ * el almacén de credenciales del sistema operativo.
  */
 const DEFAULTS: MiloConfig = {
   hotkey: DEFAULT_HOTKEY,
@@ -27,9 +28,12 @@ export function readConfig(): MiloConfig {
   try {
     const raw = fs.readFileSync(configPath(), 'utf-8');
     const parsed = JSON.parse(raw) as Partial<MiloConfig>;
+    // Se mezcla con los valores por defecto para que un config.json viejo, al
+    // que le falta una clave nueva, siga funcionando tras una actualización.
     cached = { ...DEFAULTS, ...parsed };
   } catch {
-    // Missing or corrupt file: fall back to defaults instead of crashing on boot.
+    // Archivo inexistente o corrupto: se usan los valores por defecto en vez de
+    // romper el arranque.
     cached = { ...DEFAULTS };
   }
 

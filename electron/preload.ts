@@ -1,13 +1,15 @@
 /**
- * Preload script: the ONLY surface the renderer can reach.
+ * Script de preload: la ÚNICA superficie a la que puede llegar el renderer.
  *
- * The renderer never sees Node, `ipcRenderer`, or any API key. It sees exactly
- * the `MiloBridge` object below, which is a whitelist of named operations.
+ * El renderer nunca ve Node, ni `ipcRenderer`, ni ninguna API key. Ve
+ * exactamente el objeto `MiloBridge` de abajo, que es una lista blanca de
+ * operaciones con nombre.
  *
- * Note: this file runs in a sandboxed preload, which can only `require('electron')`
- * and a couple of built-ins. That's why the channel names are duplicated as
- * literals — the `satisfies` clause makes a mismatch with the shared contract a
- * compile error instead of a silent runtime bug.
+ * Ojo: este archivo corre en un preload con sandbox, así que solo puede hacer
+ * `require('electron')` y un par de módulos internos. Por eso los nombres de
+ * canal están duplicados como literales: la cláusula `satisfies` convierte
+ * cualquier desajuste con el contrato compartido en un error de compilación en
+ * vez de un bug silencioso en ejecución.
  */
 import { contextBridge, ipcRenderer } from 'electron';
 
@@ -29,6 +31,12 @@ const CH = {
   quit: 'milo:quit',
 } as const satisfies { [K in keyof typeof CHANNELS]: (typeof CHANNELS)[K] };
 
+/**
+ * Envuelve `ipcRenderer.on` para que el renderer reciba solo el payload, sin el
+ * `IpcRendererEvent` (que arrastra referencias internas de Electron), y para
+ * devolver una función de baja. Sin esa baja, cada componente que se destruye
+ * deja un listener vivo y el proceso main acumula envíos a la nada.
+ */
 function subscribe<T>(channel: string, handler: (payload: T) => void): () => void {
   const listener = (_event: Electron.IpcRendererEvent, payload: T) => handler(payload);
   ipcRenderer.on(channel, listener);
@@ -52,4 +60,6 @@ const bridge: MiloBridge = {
   quit: () => ipcRenderer.send(CH.quit),
 };
 
+// `exposeInMainWorld` publica el objeto como `window.milo` dentro del renderer.
+// Nada más cruza la frontera: ni `ipcRenderer`, ni `require`, ni `process`.
 contextBridge.exposeInMainWorld('milo', bridge);

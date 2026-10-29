@@ -3,12 +3,16 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import type { MascotState } from '../../../shared/ipc';
 
 /**
- * Milo's body, drawn entirely in code.
+ * El cuerpo de Milo, dibujado entero en código.
  *
- * Every visual is a shape driven by the `state` input, so personality lives in
- * parameters instead of art assets. For now the transitions are CSS keyframes;
- * phase 1 replaces them with springs so the body reacts to cursor impulses
- * instead of just looping.
+ * Cada parte del dibujo es una forma que reacciona al input `state`, así que la
+ * personalidad vive en parámetros y no en assets de arte. Por ahora las
+ * transiciones son keyframes de CSS; más adelante se cambian por muelles
+ * (springs) para que el cuerpo responda a impulsos del cursor en vez de solo
+ * repetir un bucle.
+ *
+ * Al ser un `input` normal (no `input.required`), si nadie le pasa el estado se
+ * queda en `idle`: el componente nunca rompe la vista por falta de datos.
  */
 @Component({
   selector: 'app-mascot',

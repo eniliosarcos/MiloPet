@@ -28,12 +28,17 @@
   display: flex;
   justify-content: center;
   padding: 0 12px;
+  // Por encima del personaje: si se solapan, el texto siempre se lee.
   z-index: 1;
 }
 
 /**
- * The only region that receives clicks. Everything outside it stays
- * click-through, so Milo never blocks the user's real work.
+ * La única región que recibe clics. Todo lo que queda fuera sigue siendo
+ * click-through, así que Milo nunca bloquea el trabajo real.
+ *
+ * El resto de la app tiene `pointer-events: none`; solo este elemento lo vuelve
+ * a activar. `app.ts` comprueba con `elementFromPoint` si el cursor está aquí
+ * para avisarle al proceso main.
  */
 .hotspot {
   position: absolute;

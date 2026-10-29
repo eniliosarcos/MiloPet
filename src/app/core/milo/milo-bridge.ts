@@ -8,16 +8,22 @@ import {
 } from '../../../shared/ipc';
 
 /**
- * Fallback used when the app runs in a plain browser (`ng serve` in Chrome).
+ * Sustituto que se usa cuando la app corre en un navegador normal
+ * (`ng serve` en Chrome).
  *
- * This is not a luxury: it lets you iterate on the mascot design and the state
- * machine with full HMR, without booting Electron on every tweak.
+ * No es un lujo: permite iterar el diseño del personaje y la máquina de estados
+ * con hot reload completo, sin arrancar Electron en cada ajuste.
+ *
+ * Aquí no hay ventana que hacer click-through, ni proceso main al que reportar,
+ * ni app que cerrar: esos métodos quedan vacíos a propósito.
  */
 function createBrowserBridge(): MiloBridge {
   const hotkeyHandlers = new Set<() => void>();
   const failureHandlers = new Set<(failure: HotkeyRegistration) => void>();
   let config: MiloConfig = { hotkey: DEFAULT_HOTKEY };
 
+  // Equivalente en navegador del atajo global: aquí sí se puede escuchar el
+  // teclado directamente sobre la página.
   window.addEventListener('keydown', (event) => {
     if (event.ctrlKey && event.shiftKey && event.code === 'Space') {
       event.preventDefault();
@@ -39,7 +45,7 @@ function createBrowserBridge(): MiloBridge {
       };
     },
     setInteractive() {
-      // No window to make click-through in a browser.
+      // En un navegador no hay ventana que hacer click-through.
     },
     async getConfig() {
       return config;
@@ -49,15 +55,21 @@ function createBrowserBridge(): MiloBridge {
       return { ok: true, accelerator };
     },
     setState() {
-      // Nothing to report to in a browser.
+      // No hay proceso main al que informar.
     },
     quit() {
-      // No app to quit in a browser.
+      // No hay app que cerrar.
     },
   };
 }
 
-/** The bridge exposed by the Electron preload, or a browser stand-in. */
+/**
+ * El puente que expone el preload de Electron, o su sustituto de navegador.
+ *
+ * `inject(MILO)` en cualquier componente o servicio devuelve `window.milo` si
+ * existe. Así el mismo código de la app funciona en los dos entornos sin un
+ * solo `if (window.milo)` repartido por el código.
+ */
 export const MILO = new InjectionToken<MiloBridge>('MILO', {
   providedIn: 'root',
   factory: () => (window as Window & { milo?: MiloBridge }).milo ?? createBrowserBridge(),
