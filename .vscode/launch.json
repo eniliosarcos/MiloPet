@@ -3,8 +3,8 @@
   "version": "0.2.0",
   "configurations": [
     {
-      // Fastest loop for the mascot itself: full HMR, no Electron boot.
-      // The bridge falls back to a browser stand-in, so Ctrl+Shift+Space works.
+      // El ciclo más rápido para la mascota: HMR completo, sin arrancar Electron.
+      // El puente cae al sustituto de navegador, así que Ctrl+Shift+Space funciona.
       "name": "Mascot in Chrome (ng serve)",
       "type": "chrome",
       "request": "launch",
@@ -13,8 +13,8 @@
       "webRoot": "${workspaceFolder}"
     },
     {
-      // Breakpoints in electron/main.ts. Requires `npm run build:electron` first
-      // and the Angular dev server running (npm run dev:web).
+      // Puntos de interrupción en electron/main.ts. Requiere `npm run build:electron`
+      // y el servidor de desarrollo de Angular corriendo (npm run dev:web).
       "name": "Electron: main process",
       "type": "node",
       "request": "launch",
@@ -27,7 +27,7 @@
       "skipFiles": ["<node_internals>/**"]
     },
     {
-      // Breakpoints in the renderer, attached to the running Electron window.
+      // Puntos de interrupción en el renderer, enganchados a la ventana de Electron ya abierta.
       "name": "Electron: renderer",
       "type": "chrome",
       "request": "attach",
