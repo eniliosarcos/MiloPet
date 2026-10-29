@@ -8,6 +8,14 @@ Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 
 ## Historial
 
+### 2026-10-29 — La mirada sigue al cursor · feat
+
+**Qué:** Mientras el cursor está dentro de la ventana, los ojos se inclinan hacia él y el barrido automático se apaga; al salir vuelven a barrer solos.
+**Por qué:** el usuario quería que Milo mirara al ratón cuando pasa cerca.
+**Tocó:** `src/app/features/mascot/`, `docs/`.
+**Aprendido:** el renderer solo ve el cursor dentro de su ventana, así que "cerca" es la ventana de 340×340; seguirlo en toda la pantalla pediría sondear `screen.getCursorScreenPoint()` desde main y un canal IPC nuevo. La mirada usa `translate` para sumarse al `transform` de los estados.
+**Commits:** `d17a58c`
+
 ### 2026-10-29 — Cara de Milo: ojos sin pupila y boca oculta · feat
 
 **Qué:** El personaje pierde orejas, cachetes y pupilas; cada ojo es una forma blanca con óvalo en reposo y párpado de enojo solo al fallar, la mirada barre y la boca apenas aparece.
