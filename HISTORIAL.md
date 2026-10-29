@@ -1,11 +1,20 @@
 # Historial de cambios — MiloPet
 
-Registro de todo lo que se construyó, en orden inverso (lo más nuevo arriba).
-Cada entrada responde: qué se hizo, por qué, y en qué archivos.
+Registro de lo que se construyó, en orden inverso (lo más nuevo arriba).
+Una entrada por tarea, máximo 18 líneas: el detalle vive en el commit.
+Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 
 ---
 
 ## Historial
+
+### 2026-10-29 — Reglas de agentes, skills y presupuesto del historial · chore
+
+**Qué:** `AGENTS.md` con las reglas del repo, las skills `milo-ipc` y `milo-verify`, y un check que limita el tamaño del historial.
+**Por qué:** las reglas vivían en la conversación y cada entrada duplicaba lo que ya dice el commit.
+**Tocó:** `AGENTS.md`, `.opencode/skills/`, `scripts/check-history.mjs`, `package.json`, `README.md`, `.github/workflows/ci.yml`.
+**Aprendido:** las skills de proyecto solo se descubren en `.opencode/skills/<nombre>/SKILL.md`; el check mide solo la entrada nueva para no obligar a reescribir historia.
+**Commits:** `15d5240..4dee3a2`
 
 ### 2026-10-28 — Traducción del código y recorrido guiado
 
