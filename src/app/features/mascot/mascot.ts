@@ -10,7 +10,13 @@ import {
 } from '@angular/core';
 
 import type { MascotState } from '../../../shared/ipc';
-import { GAZE_MAX, GAZE_VERTICAL, eyeScales, gazeToward, type Gaze } from './gaze';
+import { GAZE_MAX, GAZE_VERTICAL, eyeScales, gazeToward, type EyeScale, type Gaze } from './gaze';
+
+/** Lado del `viewBox` del SVG. Todas las coordenadas del dibujo viven aquí. */
+const VIEWBOX = 200;
+
+/** Centro de los ojos en el viewBox. El overlay de zonas lo comparte. */
+const EYE_Y = 108;
 
 /**
  * El cuerpo de Milo, dibujado entero en código.
@@ -53,14 +59,22 @@ export class Mascot {
   });
 
   /**
-   * La pareja gana profundidad: el ojo hacia el que mira se estrecha y el otro
-   * se ensancha. Solo en horizontal y con `toFixed` como `gazeOffset`: el
-   * navegador no necesita más precisión y así el atributo queda legible.
+   * La pareja gana profundidad: el ojo hacia el que mira encoge y se angosta, y
+   * el otro crece un poco. `toFixed` como en `gazeOffset`: el navegador no
+   * necesita más precisión y el atributo queda legible.
+   *
+   * Va como `transform` de un grupo interno, no como la propiedad individual
+   * `scale` sobre el ojo: el ojo ya anima `transform` con el parpadeo y, en
+   * cuanto hay una animación de `transform` en el mismo elemento, Chromium deja
+   * de pintar la `scale` individual sobre SVG. El layout sí la aplica —las
+   * medidas cambian—, así que el efecto parecía funcionar en las pruebas y no se
+   * veía en pantalla. Un grupo propio no compite con nadie.
    */
   protected readonly eyeScale = computed(() => {
-    const scale = eyeScales(this.gaze());
+    const { left, right } = eyeScales(this.gaze());
+    const css = (scale: EyeScale): string => `scale(${scale.x.toFixed(2)}, ${scale.y.toFixed(2)})`;
 
-    return { left: `${scale.left.toFixed(2)} 1`, right: `${scale.right.toFixed(2)} 1` };
+    return { left: css(left), right: css(right) };
   });
 
   /**
@@ -77,10 +91,9 @@ export class Mascot {
     // componente: hay que reproducir ese encaje para saber dónde caen los ojos.
     const size = Math.min(rect.width, rect.height);
     const eyeX = rect.left + rect.width / 2;
-    // En el viewBox los ojos están a y=108 de 200, o sea al 54 % del alto.
-    const eyeY = rect.top + (rect.height - size) / 2 + size * 0.54;
+    const eyeY = rect.top + (rect.height - size) / 2 + (size * EYE_Y) / VIEWBOX;
 
-    this.gaze.set(gazeToward(event.clientX - eyeX, event.clientY - eyeY, size, this.gaze()));
+    this.gaze.set(gazeToward(event.clientX - eyeX, event.clientY - eyeY, size));
   }
 
   /**

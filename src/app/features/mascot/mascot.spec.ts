@@ -75,28 +75,27 @@ describe('Mascot', () => {
     expect(y).toBeLessThan(0);
   });
 
-  it('acercar el cursor cambia la dirección, no el desplazamiento', () => {
+  it('acompaña al cursor: más cerca, menos desplazamiento', () => {
     movePointer(EYE_X + 150, EYE_Y);
     const far = offset()[0];
 
-    movePointer(EYE_X + 40, EYE_Y);
+    movePointer(EYE_X + 30, EYE_Y);
     const near = offset()[0];
 
-    // `GAZE_EDGE = 1` en `gaze.ts`: el desplazamiento ya está al máximo desde el
-    // borde del alcance, así que acercarse no lo agranda.
-    expect(far).toBeGreaterThan(0);
-    expect(near).toBeCloseTo(far, 5);
+    // Lejos del alcance (`GAZE_REACH`) el ojo está en el borde de su recorrido;
+    // cerca, el desplazamiento es proporcional. Es lo que hace que siga al ratón.
+    expect(far).toBeCloseTo(15, 2);
+    expect(near).toBeGreaterThan(0);
+    expect(near).toBeLessThan(far);
   });
 
-  it('entre los dos ojos mantiene la última dirección, ya al máximo', () => {
+  it('en el centro de los ojos la mirada se centra', () => {
     movePointer(EYE_X + 80, EYE_Y);
-    const [before] = offset();
+    expect(offset()[0]).toBeGreaterThan(0);
 
-    // A 5 px del centro la dirección sería inestable: se conserva la anterior.
-    movePointer(EYE_X + 5, EYE_Y);
+    movePointer(EYE_X, EYE_Y);
 
-    expect(before).toBeGreaterThan(0);
-    expect(offset()[0]).toBe(before);
+    expect(offset()).toEqual([0, 0]);
   });
 
   it('suelta la mirada cuando el cursor abandona la ventana', () => {
@@ -112,20 +111,34 @@ describe('Mascot', () => {
     expect(offset()).toEqual([0, 0]);
   });
 
-  it('da volumen a la pareja: estrecha un ojo y ensancha el otro, sin tocar la altura', () => {
+  it('da volumen a la pareja: el ojo hacia el cursor encoge y el otro crece', () => {
     movePointer(EYE_X + 80, EYE_Y);
 
-    const left = fixture.nativeElement.querySelector('.mascot__eye--left') as SVGGElement;
-    const right = fixture.nativeElement.querySelector('.mascot__eye--right') as SVGGElement;
-    const [rightX, rightY] = right.style.scale.split(' ').map(Number.parseFloat);
-    const [leftX, leftY] = left.style.scale.split(' ').map(Number.parseFloat);
+    // La escala vive en el envoltorio, no en el ojo: el ojo anima `transform` y
+    // el navegador deja de pintar la escala si va en el mismo elemento.
+    const left = fixture.nativeElement.querySelector(
+      '.mascot__eye--left .mascot__eye-scaler',
+    ) as SVGGElement;
+    const right = fixture.nativeElement.querySelector(
+      '.mascot__eye--right .mascot__eye-scaler',
+    ) as SVGGElement;
 
-    // Mirando a la derecha, el derecho es el que se aleja hacia el cursor.
+    const readScale = (el: SVGGElement): [number, number] => {
+      const match = /scale\(([\d.]+), ([\d.]+)\)/.exec(el.style.transform);
+      if (match === null) throw new Error(`Sin escala en "${el.style.transform}".`);
+
+      return [Number.parseFloat(match[1]), Number.parseFloat(match[2])];
+    };
+
+    const [rightX, rightY] = readScale(right);
+    const [leftX, leftY] = readScale(left);
+
+    // Mirando a la derecha, el derecho es el que se aleja hacia el cursor: es el
+    // que se ve más pequeño en los dos ejes.
     expect(rightX).toBeLessThan(1);
+    expect(rightY).toBeLessThan(1);
     expect(leftX).toBeGreaterThan(1);
-    // La altura no se toca: si cambiara, el ojo parecería deformado, no girado.
-    expect(rightY).toBe(1);
-    expect(leftY).toBe(1);
+    expect(leftY).toBeGreaterThan(1);
   });
 
   it('no sigue un cursor lejano: vuelve al barrido automático', () => {

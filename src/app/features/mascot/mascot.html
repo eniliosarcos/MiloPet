@@ -40,31 +40,41 @@
            barre la mirada; `.mascot__eyes` desplaza el conjunto y, cuando el
            cursor está cerca, lo inclina hacia él (`translate` inline). -->
       <g class="mascot__eyes" [style.translate]="gazeOffset()">
-        <g class="mascot__eye mascot__eye--left" [style.scale]="eyeScale().left">
-          <ellipse
-            class="mascot__eye-shape mascot__eye-shape--calm"
-            cx="80"
-            cy="108"
-            rx="16.5"
-            ry="18"
-          />
-          <path
-            class="mascot__eye-shape mascot__eye-shape--glare"
-            d="M62 95 C73 90 89 94 98 102 C94 120 79 126 69 119 C61 113 58 103 62 95 Z"
-          />
+        <!--
+          El envoltorio existe solo para la perspectiva de la mirada: lleva el
+          `transform` y deja que el ojo conserve sus animaciones. Poner la escala
+          en el propio `.mascot__eye` la vuelve invisible: con una animación de
+          `transform` en el mismo elemento, el navegador pinta el ojo sin ella.
+        -->
+        <g class="mascot__eye mascot__eye--left">
+          <g class="mascot__eye-scaler" [style.transform]="eyeScale().left">
+            <ellipse
+              class="mascot__eye-shape mascot__eye-shape--calm"
+              cx="80"
+              cy="108"
+              rx="16.5"
+              ry="18"
+            />
+            <path
+              class="mascot__eye-shape mascot__eye-shape--glare"
+              d="M62 95 C73 90 89 94 98 102 C94 120 79 126 69 119 C61 113 58 103 62 95 Z"
+            />
+          </g>
         </g>
-        <g class="mascot__eye mascot__eye--right" [style.scale]="eyeScale().right">
-          <ellipse
-            class="mascot__eye-shape mascot__eye-shape--calm"
-            cx="120"
-            cy="108"
-            rx="16.5"
-            ry="18"
-          />
-          <path
-            class="mascot__eye-shape mascot__eye-shape--glare"
-            d="M138 95 C127 90 111 94 102 102 C106 120 121 126 131 119 C139 113 142 103 138 95 Z"
-          />
+        <g class="mascot__eye mascot__eye--right">
+          <g class="mascot__eye-scaler" [style.transform]="eyeScale().right">
+            <ellipse
+              class="mascot__eye-shape mascot__eye-shape--calm"
+              cx="120"
+              cy="108"
+              rx="16.5"
+              ry="18"
+            />
+            <path
+              class="mascot__eye-shape mascot__eye-shape--glare"
+              d="M138 95 C127 90 111 94 102 102 C106 120 121 126 131 119 C139 113 142 103 138 95 Z"
+            />
+          </g>
         </g>
       </g>
 

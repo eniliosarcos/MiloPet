@@ -21,23 +21,16 @@ export interface Gaze {
 export const GAZE_RANGE = 0.8;
 
 /**
- * Desplazamiento en el borde del alcance, como fracción del máximo.
+ * Distancia a la que el ojo llega a su desplazamiento máximo, como fracción del
+ * lado del personaje.
  *
- * A 1 no hay rampa: dentro del alcance la mirada sale ya completa, en el borde
- * de la ventana igual que encima de la cara. Bajarlo hace que el ojo empiece
- * corto en el borde y gane recorrido al acercarse, pero entonces el gesto casi
- * no se nota cuando el cursor está lejos.
+ * Es la perilla de la fluidez. Por debajo de esta distancia el ojo acompaña al
+ * cursor de forma proporcional; a partir de aquí se queda en el borde de su
+ * recorrido y solo cambia de dirección. Bajarla convierte la mirada en un
+ * interruptor que salta de un extremo al otro; subirla hace que el ojo siga al
+ * ratón píxel a píxel.
  */
-export const GAZE_EDGE = 1;
-
-/**
- * Radio muerto alrededor del centro de los ojos, en fracción del lado.
- *
- * Ahí el cursor está entre los dos ojos y la dirección es inestable: un píxel de
- * más a la izquierda o a la derecha cambiaría la mirada de lado a lado. Dentro
- * del radio se conserva la última dirección, ya en su desplazamiento máximo.
- */
-export const GAZE_DEADZONE = 0.08;
+export const GAZE_REACH = 0.25;
 
 /**
  * Desplazamiento máximo, en unidades del `viewBox` (200x200).
@@ -51,46 +44,60 @@ export const GAZE_MAX = 15;
 export const GAZE_VERTICAL = 0.5;
 
 /**
- * Cuánto se estrecha en horizontal el ojo que queda más lejos, en la dirección
+ * Cuánto se angosta en horizontal el ojo que queda más lejos, en la dirección
  * de la mirada.
  *
- * No es un escalado: el ojo que se aleja se va de perfil y se ve más angosto,
- * con la misma altura. Encogerlo entero dejaba dos círculos de distinto tamaño,
- * que se lee como un ojo mal hecho, no como profundidad.
+ * Es la pista de profundidad: el ojo que se aleja se va de perfil. Por sí sola
+ * no basta, porque la altura no cambia y el ojo se lee igual de grande; por eso
+ * va acompañada de `GAZE_TOWARD_SHRINK`.
  */
-export const GAZE_TOWARD_NARROW = 0.18;
+export const GAZE_TOWARD_NARROW = 0.3;
 
-/**
- * Cuánto se ensancha el ojo del lado contrario, como fracción.
- *
- * Estrechar solo uno descuadra la pareja: se lee como un ojo mal dibujado. Con
- * el otro ensanchándose un poco, los dos cambios se interpretan juntos como un
- * solo giro.
- */
-export const GAZE_AWAY_WIDEN = 0.06;
+/** Cuánto encoge en vertical ese mismo ojo, como fracción. */
+export const GAZE_TOWARD_SHRINK = 0.18;
 
-/** Escala horizontal de cada ojo; 1 es su anchura de reposo. */
+/** Cuánto se ensancha el ojo del lado contrario, como fracción. */
+export const GAZE_AWAY_WIDEN = 0.08;
+
+/** Cuánto crece en vertical ese mismo ojo, como fracción. */
+export const GAZE_AWAY_GROW = 0.05;
+
+/** Escala de cada ojo por eje; 1 es su tamaño de reposo. */
+export interface EyeScale {
+  readonly x: number;
+  readonly y: number;
+}
+
 export interface EyeScales {
-  readonly left: number;
-  readonly right: number;
+  readonly left: EyeScale;
+  readonly right: EyeScale;
 }
 
 /**
- * Da volumen a la pareja: el ojo hacia el que se mira se estrecha y el otro se
- * ensancha, siempre en horizontal.
+ * Da volumen a la pareja: el ojo hacia el que se mira encoge y se angosta, y el
+ * otro crece un poco.
  *
- * Mirando a la derecha, el derecho es el que se aleja hacia el cursor y el que
- * se angosta. Mirando al centro los dos valen 1: sin giro no hay perspectiva
- * que fingir.
+ * Mirando a la derecha, el derecho es el que se aleja hacia el cursor. Mirando
+ * al centro los dos valen 1: sin giro no hay perspectiva que fingir.
  */
 export function eyeScales(gaze: Gaze | null): EyeScales {
   const x = gaze?.x ?? 0;
   const toTheRight = Math.max(0, x);
   const toTheLeft = Math.max(0, -x);
 
+  const toward = (amount: number): EyeScale => ({
+    x: 1 - amount * GAZE_TOWARD_NARROW,
+    y: 1 - amount * GAZE_TOWARD_SHRINK,
+  });
+
+  const away = (amount: number): EyeScale => ({
+    x: 1 + amount * GAZE_AWAY_WIDEN,
+    y: 1 + amount * GAZE_AWAY_GROW,
+  });
+
   return {
-    left: 1 + toTheRight * GAZE_AWAY_WIDEN - toTheLeft * GAZE_TOWARD_NARROW,
-    right: 1 + toTheLeft * GAZE_AWAY_WIDEN - toTheRight * GAZE_TOWARD_NARROW,
+    left: toTheRight > 0 ? away(toTheRight) : toward(toTheLeft),
+    right: toTheLeft > 0 ? away(toTheLeft) : toward(toTheRight),
   };
 }
 
@@ -98,26 +105,22 @@ export function eyeScales(gaze: Gaze | null): EyeScales {
  * @param dx            Cursor menos el centro de los ojos, en píxeles.
  * @param dy            Cursor menos el centro de los ojos, en píxeles.
  * @param referenceSize Lado del personaje ya renderizado, en píxeles.
- * @param previous      Mirada anterior, para no vibrar entre los dos ojos.
  */
-export function gazeToward(
-  dx: number,
-  dy: number,
-  referenceSize: number,
-  previous: Gaze | null,
-): Gaze | null {
+export function gazeToward(dx: number, dy: number, referenceSize: number): Gaze | null {
   // En los tests el SVG mide 0 px: sin referencia no hay mirada que calcular.
   if (!(referenceSize > 0)) return null;
 
   const distance = Math.hypot(dx, dy);
   if (distance > referenceSize * GAZE_RANGE) return null;
 
-  // Entre los ojos no hay dirección estable: se mantiene la última.
-  if (distance < referenceSize * GAZE_DEADZONE) return previous;
+  // Hasta `GAZE_REACH` el desplazamiento es proporcional a la distancia; a
+  // partir de ahí el ojo queda en el borde de su recorrido y solo gira. Es lo
+  // que separa "acompañar al cursor" de "conmutar entre dos extremos".
+  //
+  // En el centro exacto no hay división por cero: `factor` vale `1 / reach`, así
+  // que el resultado es (0, 0). Por eso ya no hace falta un radio muerto que
+  // congelara la última mirada.
+  const factor = 1 / Math.max(distance, referenceSize * GAZE_REACH);
 
-  // De 0 en el borde del alcance a 1 encima de los ojos.
-  const proximity = 1 - distance / (referenceSize * GAZE_RANGE);
-  const strength = GAZE_EDGE + (1 - GAZE_EDGE) * proximity;
-
-  return { x: (dx / distance) * strength, y: (dy / distance) * strength };
+  return { x: dx * factor, y: dy * factor };
 }

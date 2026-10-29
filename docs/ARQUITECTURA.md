@@ -132,6 +132,35 @@ Hacerlo en toda la pantalla exigiría que el proceso main consultara
 `screen.getCursorScreenPoint()` en un temporizador y abriera un canal IPC solo
 para eso: un sondeo permanente por un detalle cosmético. Descartado.
 
+La perspectiva de la pareja (el ojo hacia el cursor se encoge y el otro crece)
+va en un grupo interno, `.mascot__eye-scaler`, con un `transform` normal. No es
+estética de código: la propiedad individual `scale` sobre un `<g>` de SVG **sí
+cambia el layout y no llega a pintarse** en cuanto el mismo elemento anima
+`transform`, como hace el parpadeo. Medido con capturas de pantalla: el
+`getBoundingClientRect()` del ojo daba 30 px y en pantalla se veían 43. Un
+envoltorio sin animaciones se pinta siempre.
+
+El desplazamiento es **proporcional** a la distancia al cursor hasta `GAZE_REACH`
+(0,25 del lado) y se satura después. La alternativa era un vector unitario, que
+mantiene la mirada siempre al máximo y solo cambia de dirección: medido a 60 fps,
+el ojo se quedaba 517 ms quieto en un extremo y cruzaba 30 px en 166 ms al pasar
+el ratón por el centro, así que se leía como un interruptor. La contrapartida es
+que el ojo deja de ir al tope en cuanto el cursor entra en la ventana; por eso
+`GAZE_REACH` es la perilla: bajarla devuelve el interruptor, subirla hace que el
+ojo persiga al ratón casi píxel a píxel.
+
+La animación tampoco puede ser una transición con una curva que empieza plana.
+Cada `mousemove` **reinicia** la transición desde su valor actual, así que con
+`cubic-bezier(0.4, 0, 0.2, 1)` cada reinicio avanza una fracción ínfima del
+recorrido. El salto que ya aparecía al medir el vector unitario tenía, además del
+mapeo, esta segunda causa: con el cursor cruzando la ventana, los ojos se
+quedaron 200 ms en -15 px, avanzaron 4 px y luego cruzaron 25 px en 100 ms en
+cuanto el cursor se detuvo. Con `linear` cada reinicio avanza `Δt / duración` de
+lo que falta, que es un filtro exponencial: continuo y con el mismo retardo a
+cualquier frecuencia de ratón. La contrapartida es el retardo (≈100 ms), del
+orden de la latencia de la persecución visual humana; subir la duración lo hace
+más lento y bajarla lo acerca a un tic.
+
 ## Qué está simulado (no confundir con real)
 
 | Parece               | Realidad                                                       |
