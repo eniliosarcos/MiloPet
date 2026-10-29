@@ -53,9 +53,8 @@ export class Mascot {
   });
 
   /**
-   * El ojo que queda más lejos en la dirección de la mirada se encoge un poco.
-   * Es la única nota de volumen que puede dar un dibujo plano: sin ella el giro
-   * parece un desplazamiento, no una cara que se vuelve.
+   * La pareja gana profundidad: el ojo hacia el que mira encoge y el otro crece
+   * un poco. Es la única nota de volumen que puede dar un dibujo plano.
    */
   protected readonly eyeScale = computed(() => eyeScales(this.gaze()));
 

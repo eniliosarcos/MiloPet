@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { GAZE_DEADZONE, GAZE_FAR_SCALE, GAZE_RANGE, eyeScales, gazeToward } from './gaze';
+import {
+  GAZE_AWAY_GROW,
+  GAZE_DEADZONE,
+  GAZE_RANGE,
+  GAZE_TOWARD_SHRINK,
+  eyeScales,
+  gazeToward,
+} from './gaze';
 
 /** Lado del personaje ya renderizado, en píxeles. */
 const SIZE = 240;
@@ -55,26 +62,33 @@ describe('eyeScales', () => {
     expect(eyeScales({ x: 0, y: 0 })).toEqual({ left: 1, right: 1 });
   });
 
-  it('encoge el ojo que queda más lejos en la dirección de la mirada', () => {
+  it('encoge el ojo hacia el que mira y crece el del lado contrario', () => {
     // Mirando a la derecha, el derecho es el que se aleja hacia el cursor.
     const lookRight = eyeScales({ x: 1, y: 0 });
 
-    expect(lookRight.right).toBeCloseTo(1 - GAZE_FAR_SCALE, 10);
-    expect(lookRight.left).toBe(1);
+    expect(lookRight.right).toBeCloseTo(1 - GAZE_TOWARD_SHRINK, 10);
+    expect(lookRight.left).toBeCloseTo(1 + GAZE_AWAY_GROW, 10);
   });
 
-  it('es simétrico y nunca encoge más que el factor máximo', () => {
+  it('es simétrico: izquierda y derecha dan el espejo exacto', () => {
     const lookLeft = eyeScales({ x: -1, y: 0 });
     const lookRight = eyeScales({ x: 1, y: 0 });
 
     expect(lookLeft.left).toBeCloseTo(lookRight.right, 10);
-    expect(lookLeft.right).toBe(1);
-    expect(lookRight.right).toBeGreaterThanOrEqual(1 - GAZE_FAR_SCALE);
+    expect(lookLeft.right).toBeCloseTo(lookRight.left, 10);
   });
 
-  it('encoge de forma proporcional: media mirada, medio encogimiento', () => {
+  it('cambia de forma proporcional: media mirada, medio efecto', () => {
     const half = eyeScales({ x: 0.5, y: 0 });
 
-    expect(half.right).toBeCloseTo(1 - GAZE_FAR_SCALE / 2, 10);
+    expect(half.right).toBeCloseTo(1 - GAZE_TOWARD_SHRINK / 2, 10);
+    expect(half.left).toBeCloseTo(1 + GAZE_AWAY_GROW / 2, 10);
+  });
+
+  it('no se dispara: el encogimiento está acotado por la constante', () => {
+    const extreme = eyeScales({ x: 1, y: 1 });
+
+    expect(extreme.right).toBeGreaterThan(0.8);
+    expect(extreme.left).toBeLessThan(1.1);
   });
 });

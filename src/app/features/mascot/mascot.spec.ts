@@ -112,7 +112,7 @@ describe('Mascot', () => {
     expect(offset()).toEqual([0, 0]);
   });
 
-  it('encoge el ojo que queda lejos de la mirada, no el otro', () => {
+  it('da volumen a la pareja: encoge un ojo y crece el otro', () => {
     movePointer(EYE_X + 80, EYE_Y);
 
     const left = fixture.nativeElement.querySelector('.mascot__eye--left') as SVGGElement;
@@ -120,7 +120,7 @@ describe('Mascot', () => {
 
     // Mirando a la derecha, el derecho es el que se aleja hacia el cursor.
     expect(Number.parseFloat(right.style.scale)).toBeLessThan(1);
-    expect(Number.parseFloat(left.style.scale)).toBe(1);
+    expect(Number.parseFloat(left.style.scale)).toBeGreaterThan(1);
   });
 
   it('no sigue un cursor lejano: vuelve al barrido automático', () => {
