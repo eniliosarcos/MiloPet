@@ -8,6 +8,30 @@ Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 
 ## Historial
 
+### 2026-10-29 - La mirada sigue al cursor de forma proporcional y continua · feat
+
+**Qué:** Los ojos se desplazan en proporción a la distancia al cursor hasta `GAZE_REACH` (0,25 del lado) y se saturan después; la pareja gana perspectiva (30 % de estrechamiento en el ojo que apunta, 8 % de ensanche en el otro) y seguir usa 100 ms `linear`.
+**Por qué:** el vector unitario saturaba la mirada en cuanto el cursor entraba en la ventana, y la transición reiniciada en cada `mousemove` congelaba los ojos y los hacía saltar al detenerse el ratón.
+**Tocó:** `src/app/features/mascot/gaze.ts`, `mascot.ts`, `mascot.html`, `mascot.scss`, tests de la mirada, `docs/ARQUITECTURA.md`.
+**Aprendido:** un `mousemove` reinicia la transición desde el valor actual, así que con una curva de arranque plano el valor apenas avanza entre eventos; `linear` la convierte en un filtro exponencial. Medido: 200 ms en -15 px, 4 px de avance y 25 px en 100 ms al parar el cursor. Los 18 %/6 % y 420 ms de la entrada anterior quedan sustituidos.
+**Commits:** `f86ce85`
+
+### 2026-10-29 - El agarre del arrastre cabe dentro del torso · fix
+
+**Qué:** El hotspot mide lo mismo que el agarre más un anillo de 8 px, y las dos cajas caen dentro de la silueta del torso; la cara vuelve a ser click-through.
+**Por qué:** el hotspot medía 58 % y llegaba a la frente, así que el cursor prometía `grab` sobre la cara y el pecho, donde no hay región de arrastre, y el gesto "no respondía" sin lanzar ningún error.
+**Tocó:** `src/app/app.scss`, `docs/ARQUITECTURA.md`, `docs/RECORRIDO-DEL-CODIGO.md`.
+**Aprendido:** la región `app-region: drag` se traga también el `mousemove` reenviado por `setIgnoreMouseEvents`, así que el anillo exterior es lo que desbloquea la ventana; y `app-region: drag` ignora `border-radius`, comprobado arrastrando desde una esquina fuera de la elipse pintada.
+**Commits:** `00827c1`
+
+### 2026-10-29 - Modo dev que colorea las zonas reales · feat
+
+**Qué:** `npm run dev:zones` (o `?zones=1`) pinta el hotspot en azul, el agarre en rojo y, en el SVG, los radios de `GAZE_REACH` y `GAZE_RANGE`.
+**Por qué:** dos fallos seguidos vinieron de adivinar rectángulos invisibles: primero el agarre sobre los ojos, después el agarre que no coincidía con el hotspot.
+**Tocó:** `src/app/app.ts`, `app.html`, `app.scss`, `app.spec.ts`, `src/app/features/mascot/`, `electron/window.ts`, `package.json`, `docs/RECORRIDO-DEL-CODIGO.md`.
+**Aprendido:** el overlay colorea los elementos reales en vez de recalcular la geometría, así que no puede desviarse; y no lleva atajo de teclado porque la ventana es click-through y casi nunca tiene el foco.
+**Commits:** `4365c9d`
+
 ### 2026-10-29 — La mirada da volumen a la pareja de ojos · feat
 
 **Qué:** Al seguir al cursor, el ojo hacia el que mira se estrecha un 18 % en horizontal y el otro se ensancha un 6 %, con la altura intacta y transición de 420 ms.
