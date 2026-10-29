@@ -14,9 +14,17 @@
     "preview": "npm run build && cross-env MILOPET_DEV=0 electron .",
     "package": "npm run build && electron-builder",
     "test": "ng test",
-    "typecheck": "tsc -p tsconfig.electron.json --noEmit && ng build --configuration development"
+    "test:ci": "ng test --watch=false",
+    "typecheck": "tsc -p tsconfig.electron.json --noEmit && ng build --configuration development",
+    "lint": "ng lint",
+    "lint:fix": "ng lint --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "private": true,
+  "engines": {
+    "node": ">=22.22.3"
+  },
   "packageManager": "npm@10.9.8",
   "dependencies": {
     "@angular/common": "^22.2.0",
@@ -32,14 +40,18 @@
     "@angular/build": "^22.2.5",
     "@angular/cli": "^22.2.5",
     "@angular/compiler-cli": "^22.2.0",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.20.5",
+    "angular-eslint": "22.6.0",
     "concurrently": "^10.0.6",
     "cross-env": "^10.1.0",
     "electron": "^45.1.0",
     "electron-builder": "^26.18.0",
+    "eslint": "^10.12.0",
     "jsdom": "^30.0.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",
+    "typescript-eslint": "8.71.0",
     "vitest": "^5.0.0",
     "wait-on": "^9.5.1"
   }

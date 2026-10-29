@@ -1,0 +1,10 @@
+# Normaliza los finales de línea: el repo queda en LF aunque se trabaje en Windows.
+# Sin esto, cada archivo aparece como "modificado" al cambiar de máquina.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

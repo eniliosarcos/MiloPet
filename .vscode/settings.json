@@ -1,0 +1,25 @@
+{
+  // Formato al guardar con Prettier: misma salida que `npm run format`.
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  // LF en todo el repo. .gitattributes ya lo fuerza en git; esto alinea el editor.
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  // Usa el TypeScript del proyecto, no el que trae VS Code.
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  // Las plantillas de Angular no llevan formato de TS.
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "search.exclude": {
+    "**/dist": true,
+    "**/dist-electron": true,
+    "**/release": true,
+    "**/.angular": true
+  }
+}
