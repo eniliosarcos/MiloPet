@@ -13,7 +13,7 @@ Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 **Qué:** `README` pasa de "fase 1, no hay micrófono" a fase 2 con micrófono, VAD, transcripción y ajustes; añade cómo configurar la clave y dónde vive. `RECORRIDO` corrige lo que la fase 2 movió: `MessageTone`, tiempos en `interaction.ts`, arranque de dos ventanas, tipos del contrato, `lockPermissions`, `backgroundThrottling`, numeración del viaje y el glosario (STT ya no es solo Whisper).
 **Por qué:** los documentos describían un Milo que ya no existe; el propio `AGENTS.md` decía que no había micrófono.
 **Tocó:** `README.md`, `AGENTS.md`, `docs/ARQUITECTURA.md`, `docs/RECORRIDO-DEL-CODIGO.md`.
-**Commits:** `PENDIENTE`
+**Commits:** `22a0bdb`
 
 ### 2026-10-29 — El proveedor de voz pasa a Deepgram por bloqueo regional · fix
 

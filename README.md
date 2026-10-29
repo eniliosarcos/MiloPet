@@ -18,7 +18,8 @@ Lo que ya funciona:
 
 - Ventana transparente, sin marco, always-on-top, anclada abajo a la derecha.
 - Click-through en todo el área excepto sobre el personaje (no bloquea tu trabajo).
-- Atajo global `Ctrl+Shift+Space` con detección de conflicto.
+- Atajo global `Ctrl+Shift+Space` con detección de conflicto (el aviso al
+  arrancar todavía se pierde; está en el backlog previo a la fase 2).
 - Máquina de estados `idle → listening → thinking → acting → idle`, que mueve
   tanto al personaje como a la burbuja de texto.
 - **Micrófono real.** `listening` dura lo que dura tu frase: el VAD la cierra al
