@@ -112,7 +112,23 @@ terminarás metiendo un hook de teclado nativo y builds frágiles.
 `.hotspot__grip` usa `app-region: drag`, que resuelve el sistema operativo: no hay
 handler de `mousedown` ni canal IPC nuevo. La contrapartida es que una región de
 arrastre **ignora todos los eventos de puntero**, y de ahí el anillo exterior de
-12 px que mantiene vivo el `mousemove` que desbloquea los clics.
+8 px que mantiene vivo el `mousemove` que desbloquea los clics.
+
+Esa misma contrapartida obliga a que el agarre **no cubra la cara**. Los ojos
+necesitan el `mousemove` para saber dónde está el cursor; con el agarre encima,
+Milo solo reaccionaba desde el borde de la ventana, que es donde nadie pone el
+ratón para mirarlo. El agarre ocupa el torso, por debajo de la línea de los ojos:
+se arrastra desde la barriga y la cara queda viva. Si algún día se quiere
+arrastrar desde cualquier punto, hay que abandonar la región nativa e
+implementar el arrastre por IPC con `screen.getCursorScreenPoint()`.
+
+La caja interactiva (`.hotspot`) debe medir **lo mismo que el agarre más el
+anillo**, porque es la que pinta `cursor: grab`. Cuando medía el cuerpo entero
+llegaba hasta la frente, el cursor prometía arrastre sobre el pecho y el gesto no
+respondía sin lanzar ningún error. Un desajuste entre las dos cajas no rompe
+nada visible: solo hace que Milo "no se deje mover". Para verificarlo sin
+adivinar, `npm run dev:zones` colorea los dos elementos reales y dibuja los
+radios de la mirada; el overlay no copia geometría, así que no puede mentir.
 
 La posición se guarda en `config.json` desde `moved`, que se emite una vez al
 soltar (guardar en cada `move` escribiría el disco decenas de veces por segundo).

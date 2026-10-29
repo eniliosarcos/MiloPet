@@ -48,10 +48,21 @@
 .hotspot {
   position: absolute;
   left: 50%;
-  top: 58%;
-  width: 58%;
-  height: 52%;
-  transform: translate(-50%, -50%);
+  // La caja es la barriga, no el cuerpo entero. Antes medía 58 % y llegaba
+  // hasta la cara: pintaba `cursor: grab` sobre la frente y el pecho, donde no
+  // hay región de arrastre, así que el cursor prometía un gesto que no existía.
+  // Ahora el hotspot y el agarre miden lo mismo, y el `cursor: grab` solo
+  // aparece donde de verdad se puede arrastrar.
+  //
+  // El borde de 8 px que sobra alrededor del agarre no es decoración: es la
+  // franja que recibe el `mousemove` con el que `app.ts` desbloquea los clics.
+  // Sin ella, el cursor puede aterrizar directo en la región de arrastre
+  // mientras la ventana sigue siendo click-through, y el `mousedown` se va al
+  // escritorio.
+  top: 70%;
+  width: 32%;
+  height: 17%;
+  transform: translateX(-50%);
   border-radius: 50%;
   pointer-events: auto;
   cursor: grab;
@@ -68,12 +79,22 @@
  * solo handler de `mousedown` ni un canal IPC nuevo. El precio es que la zona
  * deja de emitir eventos de puntero, y por eso NO cubre el borde del hotspot:
  * esa franja exterior es la que permite que `app.ts` reciba el `mousemove` que
- * desbloquea los clics. Si el arrastre no responde, sube el `inset`; si el
- * cursor se siente "pegajoso" al entrar, bájalo.
+ * desbloquea los clics.
+ *
+ * Tampoco cubre la cara. Ahí están los ojos, y la mirada necesita justo lo que
+ * la región de arrastre se traga: el `mousemove` con el que el renderer sabe
+ * dónde está el cursor. Por eso el agarre vive en la barriga, por debajo de la
+ * línea de los ojos, y la cara queda click-through: un clic sobre la frente
+ * llega a la aplicación de detrás.
+ *
+ * El rectángulo está calculado para caer entero dentro de la silueta del torso
+ * (elipse de 82×74 px con centro en 170, 228). El torso se estrecha rápido
+ * hacia abajo, así que ensanchar esto saca esquinas invisibles que arrastran
+ * desde fuera del cuerpo.
  */
 .hotspot__grip {
   position: absolute;
-  inset: 12px;
+  inset: 8px;
   border-radius: 50%;
   -webkit-app-region: drag;
   app-region: drag;

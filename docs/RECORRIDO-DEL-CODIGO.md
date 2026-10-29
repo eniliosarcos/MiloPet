@@ -127,7 +127,7 @@ interactiva **antes** de que pulses el botón, porque mientras es click-through 
 sistema manda el clic al programa de detrás. Y aquí hay una trampa: una región
 `app-region: drag` ignora todos los eventos de puntero, así que si cubriera el
 hotspot entero, el aviso que desbloquea los clics dejaría de llegar. Por eso el
-agarre está metido 12 px: el anillo exterior mantiene la cadena viva.
+agarre está metido 8 px: el anillo exterior mantiene la cadena viva.
 
 Esos mismos eventos son los que alimentan los ojos de Milo (sección 5): mientras
 el cursor está dentro de la ventana, la mirada lo sigue. Fuera de ella el
@@ -140,14 +140,21 @@ renderer no ve nada, y por eso el seguimiento se corta.
 Tres capas, en orden:
 
 1. `.stage__bubble` — arriba, la burbuja. Solo existe si `message()` tiene texto.
-2. `.hotspot` — un círculo invisible sobre el personaje. La zona cliqueable del
+2. `.hotspot` — un círculo invisible sobre la barriga. La zona cliqueable del
    personaje (la burbuja trae la suya, para la (x)).
 3. `app-mascot` — el personaje, abajo.
 
 Dentro del hotspot vive `.hotspot__grip`, la franja que **arrastra la ventana**.
-Está metida 12 px a propósito: el sistema operativo resuelve el arrastre y, a
+Está metida 8 px a propósito: el sistema operativo resuelve el arrastre y, a
 cambio, esa zona deja de emitir eventos de puntero. El anillo exterior sobra para
 que `elementFromPoint` siga viendo el hotspot y la ventana acepte clics.
+
+El hotspot mide **lo mismo que el agarre más ese anillo**, y por eso vive en la
+barriga y no en el cuerpo entero: es la caja que pinta `cursor: grab`. Cuando
+medía 58 % llegaba hasta la frente y el pecho, así que el cursor prometía
+arrastre en zonas donde no había región de arrastre y el gesto "no respondía"
+sin ningún error. La cara queda fuera a propósito: sus `mousemove` son los que
+alimentan la mirada.
 
 El detalle que confunde al principio: `pointer-events: none` está en el
 componente del personaje y `.hotspot` lo reactiva con `pointer-events: auto`. Si
