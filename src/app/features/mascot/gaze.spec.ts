@@ -44,7 +44,8 @@ describe('gazeToward', () => {
 
   it('se satura al llegar al alcance: más lejos no mueve más el ojo', () => {
     const atReach = gazeToward(SIZE * GAZE_REACH, 0, SIZE);
-    const far = gazeToward(SIZE * 0.7, 0, SIZE);
+    // A mitad de camino entre los dos radios: ya satura y sigue dentro.
+    const far = gazeToward(SIZE * ((GAZE_REACH + GAZE_RANGE) / 2), 0, SIZE);
 
     expect(magnitude(far)).toBeCloseTo(1, 5);
     expect(far).toEqual(atReach);

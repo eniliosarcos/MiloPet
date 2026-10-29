@@ -17,8 +17,19 @@ export interface Gaze {
  *
  * Existe un límite a propósito: unos ojos que te siguen por toda la pantalla no
  * se leen como atención, se leen como vigilancia.
+ *
+ * 0,42 × 265 px ≈ 111 px. La cifra no es estética: los ojos están a 122 px del
+ * borde inferior de la ventana de 340 y el punto más ancho de la silueta —el
+ * torso en `error`, que escala 1,25— queda a 107 px del centro de los ojos. Con
+ * este radio el cuerpo entero sigue dentro del alcance y el círculo cabe
+ * completo en la ventana. Con 0,8 (212 px) el límite caía fuera de la ventana:
+ * los ojos solo se soltaban al salir de ella, así que la perilla no cambiaba
+ * nada visible y el overlay de zonas dibujaba un arco cortado.
+ *
+ * La contrapartida, que es la decisión: Milo deja de seguir al cursor cuando
+ * este abandona el cuerpo más un halo de ~20 px, no cuando abandona la ventana.
  */
-export const GAZE_RANGE = 0.8;
+export const GAZE_RANGE = 0.42;
 
 /**
  * Distancia a la que el ojo llega a su desplazamiento máximo, como fracción del

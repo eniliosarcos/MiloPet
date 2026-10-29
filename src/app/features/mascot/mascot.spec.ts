@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 
+import { GAZE_RANGE, GAZE_REACH } from './gaze';
 import { Mascot } from './mascot';
 
 /**
@@ -76,7 +77,10 @@ describe('Mascot', () => {
   });
 
   it('acompaña al cursor: más cerca, menos desplazamiento', () => {
-    movePointer(EYE_X + 150, EYE_Y);
+    // Dentro del alcance, pero muy por encima de `GAZE_REACH`: el ojo ya está en
+    // el borde de su recorrido. Un valor fijo como 150 px codificaba el alcance
+    // viejo y se salía de la mirada en cuanto `GAZE_RANGE` bajaba.
+    movePointer(EYE_X + RECT.width * ((GAZE_REACH + GAZE_RANGE) / 2), EYE_Y);
     const far = offset()[0];
 
     movePointer(EYE_X + 30, EYE_Y);
