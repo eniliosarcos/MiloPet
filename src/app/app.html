@@ -15,8 +15,11 @@
     }
   </div>
 
-  <!-- La única zona cliqueable de toda la ventana (ver `.hotspot` en app.scss). -->
-  <div class="hotspot" data-interactive></div>
+  <!-- La zona interactiva del personaje (ver `.hotspot` en app.scss). -->
+  <div class="hotspot" data-interactive>
+    <!-- El interior arrastra la ventana; el borde queda libre a propósito. -->
+    <div class="hotspot__grip"></div>
+  </div>
 
   <app-mascot class="stage__mascot" [state]="state()" />
 </main>

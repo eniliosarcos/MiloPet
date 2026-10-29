@@ -30,6 +30,11 @@ export type MascotState = 'idle' | 'listening' | 'thinking' | 'acting' | 'error'
 /** Ajustes que se guardan en `app.getPath('userData')/config.json`. */
 export interface MiloConfig {
   hotkey: string;
+  /**
+   * Última posición de la ventana, en coordenadas de pantalla. La escribe el
+   * proceso main al soltar el arrastre; el renderer solo la recibe de vuelta.
+   */
+  position?: { x: number; y: number };
 }
 
 /**

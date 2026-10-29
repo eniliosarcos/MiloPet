@@ -192,4 +192,17 @@ describe('App', () => {
     fixture.detectChanges();
     expect(findBubble(fixture)?.textContent?.trim()).toContain('columna vertebral');
   });
+
+  it('el agarre para arrastrar vive dentro de la zona interactiva', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    // `app-region: drag` solo arrastra si el sistema operativo puede hacer
+    // hit-test sobre la ventana, y eso depende de que el hotspot siga llevando
+    // `data-interactive`. Si alguien mueve el agarre fuera, el arrastre deja de
+    // arrancar sin lanzar ningún error: solo "no responde".
+    const grip = fixture.nativeElement.querySelector('.hotspot__grip') as HTMLElement | null;
+    expect(grip).not.toBeNull();
+    expect(grip?.closest('[data-interactive]')).not.toBeNull();
+  });
 });

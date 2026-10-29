@@ -54,5 +54,27 @@
   transform: translate(-50%, -50%);
   border-radius: 50%;
   pointer-events: auto;
-  cursor: pointer;
+  cursor: grab;
+}
+
+.hotspot:active {
+  cursor: grabbing;
+}
+
+/**
+ * La zona que arrastra la ventana.
+ *
+ * `app-region: drag` lo resuelve el sistema operativo, no JavaScript: no hay un
+ * solo handler de `mousedown` ni un canal IPC nuevo. El precio es que la zona
+ * deja de emitir eventos de puntero, y por eso NO cubre el borde del hotspot:
+ * esa franja exterior es la que permite que `app.ts` reciba el `mousemove` que
+ * desbloquea los clics. Si el arrastre no responde, sube el `inset`; si el
+ * cursor se siente "pegajoso" al entrar, bájalo.
+ */
+.hotspot__grip {
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  -webkit-app-region: drag;
+  app-region: drag;
 }

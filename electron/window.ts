@@ -1,23 +1,75 @@
 import { BrowserWindow, screen } from 'electron';
 import * as path from 'node:path';
 
+import { readConfig, writeConfig } from './config';
+
 const WINDOW_SIZE = { width: 340, height: 340 };
 const MARGIN = 24;
+
+/**
+ * Franja mínima de la ventana que debe caer dentro de un monitor para
+ * considerarla alcanzable. Menos que esto y no hay dónde agarrarla.
+ */
+const MIN_VISIBLE = 80;
 
 /** En desarrollo se carga el dev server de Angular para conservar el hot reload. */
 const DEV_SERVER_URL = 'http://localhost:4200';
 
 let mascotWindow: BrowserWindow | null = null;
 
-export function createMascotWindow(): BrowserWindow {
+interface Point {
+  x: number;
+  y: number;
+}
+
+/** Esquina inferior derecha del monitor principal, con un margen. */
+function defaultPosition(): Point {
   const { workArea } = screen.getPrimaryDisplay();
+  return {
+    x: workArea.x + workArea.width - WINDOW_SIZE.width - MARGIN,
+    y: workArea.y + workArea.height - WINDOW_SIZE.height - MARGIN,
+  };
+}
+
+/**
+ * Posición de arranque: la última guardada, si sigue siendo alcanzable.
+ *
+ * La validación no es paranoia. Milo se oculta de la barra de tareas
+ * (`skipTaskbar`) y todavía no tiene icono de bandeja, así que una ventana
+ * restaurada fuera de pantalla no se puede recuperar: no hay dónde hacer clic.
+ * Basta con desconectar el monitor donde estaba, o cambiar la resolución, para
+ * provocarlo.
+ */
+function initialPosition(): Point {
+  const saved = readConfig().position;
+
+  if (!saved || !Number.isFinite(saved.x) || !Number.isFinite(saved.y)) {
+    return defaultPosition();
+  }
+
+  const reachable = screen.getAllDisplays().some(({ workArea }) => {
+    const overlapX =
+      Math.min(saved.x + WINDOW_SIZE.width, workArea.x + workArea.width) -
+      Math.max(saved.x, workArea.x);
+    const overlapY =
+      Math.min(saved.y + WINDOW_SIZE.height, workArea.y + workArea.height) -
+      Math.max(saved.y, workArea.y);
+
+    return overlapX >= MIN_VISIBLE && overlapY >= MIN_VISIBLE;
+  });
+
+  return reachable ? saved : defaultPosition();
+}
+
+export function createMascotWindow(): BrowserWindow {
+  const position = initialPosition();
 
   const win = new BrowserWindow({
     ...WINDOW_SIZE,
-    // `workArea` excluye la barra de tareas, así que la ventana queda pegada a
-    // la esquina real de la pantalla y no debajo de ella.
-    x: workArea.x + workArea.width - WINDOW_SIZE.width - MARGIN,
-    y: workArea.y + workArea.height - WINDOW_SIZE.height - MARGIN,
+    // `initialPosition()` usa `workArea`, que excluye la barra de tareas: la
+    // ventana queda pegada a la esquina real de la pantalla y no debajo de ella.
+    x: position.x,
+    y: position.y,
     frame: false,
     transparent: true,
     backgroundColor: '#00000000',
@@ -51,6 +103,14 @@ export function createMascotWindow(): BrowserWindow {
   win.setIgnoreMouseEvents(true, { forward: true });
 
   win.once('ready-to-show', () => win.show());
+
+  // `moved` se emite una sola vez, al soltar el arrastre (Windows y macOS; en
+  // Linux hay que escuchar `move`). Guardar aquí evita tener que añadir un canal
+  // IPC solo para "avisa de que me moví".
+  win.on('moved', () => {
+    const { x, y } = win.getBounds();
+    writeConfig({ position: { x, y } });
+  });
 
   if (process.env['MILOPET_DEV'] === '1') {
     void win.loadURL(DEV_SERVER_URL);
