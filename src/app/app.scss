@@ -34,7 +34,7 @@
   z-index: 1;
 }
 
-/**
+/*
  * Las dos únicas regiones que reciben clics en Electron, porque son las que
  * llevan `[data-interactive]`:
  *
@@ -45,23 +45,29 @@
  * trabajo real. `app.ts` comprueba con `elementFromPoint` si el cursor está en
  * una de ellas para avisarle al proceso main.
  */
+
+/**
+ * La barriga, medida sobre la ventana de 340×340.
+ *
+ * El cuerpo es una elipse de 82×74 px con centro en (170, 228), y el torso se
+ * estrecha rápido hacia abajo: la caja tiene que caber en la silueta *en su
+ * borde inferior*, que es el estrechamiento que manda. Con `top: 66.5 %` y
+ * `height: 21 %` el borde inferior cae en y = 297, donde al cuerpo le quedan
+ * ~58 px de media anchura a cada lado; por eso `width: 34 %` (115 px) entra con
+ * holgura y la esquina de la elipse pintada tampoco se sale.
+ *
+ * El borde sobrante alrededor del agarre no es decoración: es la franja que
+ * recibe el `mousemove` con el que `app.ts` desbloquea los clics. Sin ella, el
+ * cursor puede aterrizar directo en la región de arrastre mientras la ventana
+ * sigue siendo click-through, y el `mousedown` se va al escritorio. Ver el
+ * comentario de `.hotspot__grip` para el ancho y su contrapartida.
+ */
 .hotspot {
   position: absolute;
   left: 50%;
-  // La caja es la barriga, no el cuerpo entero. Antes medía 58 % y llegaba
-  // hasta la cara: pintaba `cursor: grab` sobre la frente y el pecho, donde no
-  // hay región de arrastre, así que el cursor prometía un gesto que no existía.
-  // Ahora el hotspot y el agarre miden lo mismo, y el `cursor: grab` solo
-  // aparece donde de verdad se puede arrastrar.
-  //
-  // El borde de 8 px que sobra alrededor del agarre no es decoración: es la
-  // franja que recibe el `mousemove` con el que `app.ts` desbloquea los clics.
-  // Sin ella, el cursor puede aterrizar directo en la región de arrastre
-  // mientras la ventana sigue siendo click-through, y el `mousedown` se va al
-  // escritorio.
-  top: 70%;
-  width: 32%;
-  height: 17%;
+  top: 66.5%;
+  width: 34%;
+  height: 21%;
   transform: translateX(-50%);
   border-radius: 50%;
   pointer-events: auto;
@@ -73,13 +79,22 @@
 }
 
 /**
- * La zona que arrastra la ventana.
+ * La zona que arrastra la ventana: 87×43 px de rectángulo.
  *
  * `app-region: drag` lo resuelve el sistema operativo, no JavaScript: no hay un
  * solo handler de `mousedown` ni un canal IPC nuevo. El precio es que la zona
  * deja de emitir eventos de puntero, y por eso NO cubre el borde del hotspot:
  * esa franja exterior es la que permite que `app.ts` reciba el `mousemove` que
  * desbloquea los clics.
+ *
+ * El anillo mide 14 px, no 8. Ocho se cruzaban de sobra con el ratón quieto,
+ * pero al entrar rápido el cursor aterrizaba dentro del agarre sin haber pasado
+ * por la franja: la ventana seguía siendo click-through, el `mousedown` se iba
+ * al escritorio y el arrastre "no hacía nada". Catorce dan margen a un
+ * movimiento normal sin sacar la franja de la silueta del cuerpo. La
+ * contrapartida es que la franja no arrastra: pulsar justo en ella no mueve la
+ * ventana, solo la desbloquea. Ese compromiso es el techo de la región nativa;
+ * si molesta, el arrastre por IPC lo elimina (ver `docs/ARQUITECTURA.md`, 6).
  *
  * Tampoco cubre la cara. Ahí están los ojos, y la mirada necesita justo lo que
  * la región de arrastre se traga: el `mousemove` con el que el renderer sabe
@@ -90,11 +105,12 @@
  * El rectángulo está calculado para caer entero dentro de la silueta del torso
  * (elipse de 82×74 px con centro en 170, 228). El torso se estrecha rápido
  * hacia abajo, así que ensanchar esto saca esquinas invisibles que arrastran
- * desde fuera del cuerpo.
+ * desde fuera del cuerpo. Y ojo: `app-region: drag` ignora `border-radius`, así
+ * que la zona real es este rectángulo, no la elipse roja que pinta `?zones=1`.
  */
 .hotspot__grip {
   position: absolute;
-  inset: 8px;
+  inset: 14px;
   border-radius: 50%;
   -webkit-app-region: drag;
   app-region: drag;
