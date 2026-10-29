@@ -138,3 +138,31 @@
   background: rgba(244, 63, 94, 0.35);
   outline: 1px solid #f43f5e;
 }
+
+/**
+ * El borde de la ventana: la caja donde vive Milo.
+ *
+ * No es un rectángulo calculado a mano: es `.stage`, que mide el 100 % del
+ * viewport. Si algún día cambia `WINDOW_SIZE` en `electron/window.ts`, el marco
+ * se mueve solo, y por eso sirve para razonar sobre medidas sin equivocarse de
+ * caja. El relleno es tenue a propósito: marca la superficie del mundo sin tapar
+ * al personaje, y va detrás de él en el DOM.
+ */
+.stage__frame {
+  position: absolute;
+  inset: 0;
+  border: 1px dashed #a78bfa;
+  background: rgba(167, 139, 250, 0.05);
+  pointer-events: none;
+}
+
+/* El tamaño va dentro del marco: en una ventana de 340 px no hay sitio fuera. */
+.stage__frame-size {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-family: ui-monospace, 'Cascadia Mono', monospace;
+  font-size: 10px;
+  line-height: 1;
+  color: #ddd6fe;
+}

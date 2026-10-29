@@ -212,6 +212,7 @@ describe('App', () => {
     const plain = TestBed.createComponent(App);
     plain.detectChanges();
     expect(plain.nativeElement.querySelector('.mascot__zones')).toBeNull();
+    expect(plain.nativeElement.querySelector('.stage__frame')).toBeNull();
 
     history.replaceState({}, '', '/?zones=1');
     try {
@@ -221,6 +222,12 @@ describe('App', () => {
       const stage = debug.nativeElement.querySelector('.stage') as HTMLElement;
       expect(stage.classList.contains('stage--zones')).toBe(true);
       expect(debug.nativeElement.querySelector('.mascot__zones')).not.toBeNull();
+
+      // El marco dice el tamaño del mundo en la misma unidad que el CSS: sin
+      // eso, el borde violeta es un adorno que no se puede convertir a medidas.
+      const frame = debug.nativeElement.querySelector('.stage__frame');
+      expect(frame).not.toBeNull();
+      expect(frame.querySelector('.stage__frame-size').textContent).toContain(`${innerWidth}`);
     } finally {
       history.replaceState({}, '', '/');
     }

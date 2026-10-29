@@ -62,6 +62,16 @@ export class App {
    */
   protected readonly zones = signal(new URLSearchParams(location.search).has('zones'));
 
+  /**
+   * El tamaño del mundo, para leerlo junto al borde que pinta el overlay.
+   *
+   * Se mide una vez porque la ventana no se puede redimensionar. `innerWidth` y
+   * `innerHeight` son el viewport en píxeles CSS, que es la misma unidad en la
+   * que están escritas `.hotspot` y `.hotspot__grip`: así los números del marco
+   * se pueden comparar con los porcentajes del CSS sin convertir nada.
+   */
+  protected readonly frameSize = `${innerWidth} × ${innerHeight} px`;
+
   constructor() {
     const stopHotkey = this.milo.onHotkey(() => this.runInteractionLoop());
     const stopFailure = this.milo.onHotkeyFailed((failure) => this.reportHotkeyFailure(failure));

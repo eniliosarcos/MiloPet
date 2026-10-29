@@ -3,6 +3,14 @@
   estado sin que cada hijo tenga que conocerlo.
 -->
 <main class="stage" [attr.data-state]="state()" [class.stage--zones]="zones()">
+  <!-- El mundo de Milo: el borde de la ventana y su tamaño. Va primero para que
+       el tinte quede detrás del personaje y no lo lave. -->
+  @if (zones()) {
+    <div class="stage__frame" aria-hidden="true">
+      <span class="stage__frame-size">{{ frameSize }}</span>
+    </div>
+  }
+
   <!-- La burbuja solo existe cuando hay algo que decir: nunca se ve vacía. -->
   <div class="stage__bubble">
     @if (message()) {

@@ -132,8 +132,9 @@ anillo** (hoy 115×71 px, con el agarre inscrito a 14 px), porque es la que pint
 llegaba hasta la frente, el cursor prometía arrastre sobre el pecho y el gesto no
 respondía sin lanzar ningún error. Un desajuste entre las dos cajas no rompe
 nada visible: solo hace que Milo "no se deje mover". Para verificarlo sin
-adivinar, `npm run dev:zones` colorea los dos elementos reales y dibuja los
-radios de la mirada; el overlay no copia geometría, así que no puede mentir, con
+adivinar, `npm run dev:zones` colorea los dos elementos reales, dibuja los
+radios de la mirada y marca el borde de la ventana con su tamaño; el overlay no
+copia geometría, así que no puede mentir, con
 una excepción: el relleno rojo se pinta con `border-radius`, que la región nativa
 ignora, así que el rectángulo que de verdad arrastra es la caja del agarre y no
 la elipse.

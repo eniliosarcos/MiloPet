@@ -158,7 +158,9 @@ alimentan la mirada.
 
 Para verlo sin adivinar: `npm run dev:zones` (o `?zones=1` en la URL del dev
 server). Pinta el hotspot en azul, el agarre en rojo y, en el SVG, dos círculos
-con `GAZE_REACH` y `GAZE_RANGE` leídos de `gaze.ts`. El overlay no recalcula la
+con `GAZE_REACH` y `GAZE_RANGE` leídos de `gaze.ts`. El borde violeta con el
+tamaño en píxeles es la ventana entera, o sea el mundo de Milo: sirve para saber
+contra qué caja se están midiendo esos porcentajes. El overlay no recalcula la
 geometría: colorea los elementos reales, así que no puede mentir.
 
 El detalle que confunde al principio: `pointer-events: none` está en el
