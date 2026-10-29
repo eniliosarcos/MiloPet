@@ -6,9 +6,11 @@ que dices y hace pequeñas cosas por ti. Un Clippy, pero sin interrumpir.
 Angular dibuja al personaje. Electron es dueño de la ventana, del atajo global y
 de toda acción privilegiada. **El renderer nunca toca Node.**
 
-> 📐 Antes de tocar código, lee [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md):
-> explica el flujo completo, el mapa de archivos y las decisiones que no son
-> obvias. El registro de cambios está en [`HISTORIAL.md`](HISTORIAL.md).
+> 📐 Antes de tocar código, lee [`docs/RECORRIDO-DEL-CODIGO.md`](docs/RECORRIDO-DEL-CODIGO.md):
+> explica el código en orden, archivo por archivo, y el viaje completo de una
+> pulsación. Para el mapa técnico está
+> [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md). El registro de cambios está en
+> [`HISTORIAL.md`](HISTORIAL.md).
 
 ## Estado: fase 1 de 5
 

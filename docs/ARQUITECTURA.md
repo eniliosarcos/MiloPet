@@ -3,6 +3,10 @@
 Documento de referencia corto. Si vuelves al proyecto en dos semanas, esto es lo
 que necesitas leer antes de tocar código.
 
+> 🚶 Si lo que quieres es **entender el código paso a paso**, empieza por
+> [`RECORRIDO-DEL-CODIGO.md`](RECORRIDO-DEL-CODIGO.md). Este documento asume que
+> ya lo leíste.
+
 ## Idea en una frase
 
 Angular dibuja al personaje; Electron es dueño de la ventana, del atajo global y

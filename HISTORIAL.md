@@ -7,6 +7,56 @@ Cada entrada responde: qué se hizo, por qué, y en qué archivos.
 
 ## Historial
 
+### 2026-10-28 — Traducción del código y recorrido guiado
+
+**Tipo:** docs
+
+**Descripción:**
+Se tradujeron al español todos los comentarios del código que quedaban en inglés
+(contrato IPC, proceso main, renderer y estilos) y se añadió
+`docs/RECORRIDO-DEL-CODIGO.md`, una guía que explica el proyecto en el orden en
+que se ejecuta: desde `index.html` hasta la ventana de Electron, pasando por la
+máquina de estados y la frontera del preload.
+
+Los comentarios explican el **por qué** de cada decisión, no lo que el código ya
+dice. Los identificadores (`MascotState`, `createMascotWindow`, etc.) siguen en
+inglés: son la API del código y mezclar idiomas ahí sí vuelve ilegible el
+proyecto.
+
+**Bug encontrado y corregido:**
+`ng lint` solo revisaba `src/**`, así que **el proceso main nunca pasaba por
+ESLint**. Al incluirlo apareció un error real (`lastState` declarado y nunca
+leído). Se añadió `electron/**/*.ts` a `lintFilePatterns` en `angular.json` y se
+corrigió la variable usando el valor en una traza de desarrollo.
+
+También se normalizó el árbol de trabajo a LF: los archivos estaban en CRLF
+localmente y `format:check` fallaba aunque el repositorio (y CI) estaban en LF.
+
+**Archivos:**
+
+| Archivo                                                                     | Qué cambió                                             |
+| --------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `src/shared/ipc.ts`                                                         | Contrato y canales comentados en español.              |
+| `electron/preload.ts`                                                       | Explicación de la lista blanca y del `satisfies`.      |
+| `electron/main.ts`                                                          | Ciclo de vida, IPC y traza de estado en desarrollo.    |
+| `electron/window.ts`                                                        | Cada opción de la ventana y por qué existe.            |
+| `electron/hotkey.ts`, `electron/config.ts`                                  | Registro del atajo y persistencia.                     |
+| `src/app/app.ts`                                                            | Máquina de estados, signals, `effect` y click-through. |
+| `src/app/core/milo/milo-bridge.ts`                                          | Token `MILO` y sustituto de navegador.                 |
+| `src/app/features/**`                                                       | Personaje, burbuja y sus plantillas.                   |
+| `src/index.html`, `src/styles.scss`, `src/app/app.html`, `src/app/app.scss` | Comentarios y `lang="es"`.                             |
+| `src/app/app.spec.ts`                                                       | Nombres de tests en español.                           |
+| `docs/RECORRIDO-DEL-CODIGO.md`                                              | Guía nueva, lectura en orden.                          |
+| `docs/ARQUITECTURA.md`, `README.md`                                         | Enlace a la guía nueva.                                |
+| `angular.json`                                                              | `electron/**/*.ts` dentro de `lintFilePatterns`.       |
+| `package.json`                                                              | Descripción en español.                                |
+
+**Decisión clave:**
+Se traducen comentarios y documentación, nunca identificadores. Un proyecto
+público con `const crearVentanaDelPersonaje` pierde a cualquier colaborador
+externo y rompe la convención de TypeScript; el mismo proyecto con comentarios en
+español sigue siendo perfectamente navegable.
+
 ### 2026-10-28 — Publicación en GitHub
 
 **Tipo:** config
