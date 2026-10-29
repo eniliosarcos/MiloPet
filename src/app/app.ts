@@ -8,19 +8,10 @@ import {
   signal,
 } from '@angular/core';
 
-import type { HotkeyRegistration, MascotState } from '../shared/ipc';
+import { Interaction } from './core/interaction/interaction';
 import { MILO } from './core/milo/milo-bridge';
-import { Bubble, type BubbleTone } from './features/bubble/bubble';
+import { Bubble } from './features/bubble/bubble';
 import { Mascot } from './features/mascot/mascot';
-
-/** Cuánto tiempo de lectura tiene el mensaje después de volver a `idle`. */
-const BUBBLE_VISIBLE_MS = 4000;
-
-/**
- * Duración del desvanecido. Debe coincidir con la animación `bubble-out` de
- * `features/bubble/bubble.scss`: si cambias una, cambia la otra.
- */
-const BUBBLE_FADE_MS = 420;
 
 /**
  * Tope de seguridad del arrastre.
@@ -33,11 +24,12 @@ const BUBBLE_FADE_MS = 420;
 const DRAG_MAX_MS = 30_000;
 
 /**
- * Orquesta todo el bucle de interacción.
+ * La ventana de Milo: dibuja, arrastra y traduce el ratón.
  *
- * La fase 1 solo demuestra la columna vertebral: atajo -> máquina de estados ->
- * burbuja. La fase 2 sustituye la cadena de `setTimeout` por el pipeline de voz,
- * y la fase 3 sustituye el mensaje fijo por el cerebro.
+ * El bucle de interacción (atajo → escuchar → pensar → responder) vive en
+ * `core/interaction/interaction.ts`: depende del micrófono, así que no puede
+ * quedar dentro de un componente que además dibuja y arrastra. Aquí queda lo que
+ * es de la ventana.
  */
 @Component({
   selector: 'app-root',
@@ -48,11 +40,10 @@ const DRAG_MAX_MS = 30_000;
 })
 export class App {
   private readonly milo = inject(MILO);
+  private readonly interaction = inject(Interaction);
   private readonly destroyRef = inject(DestroyRef);
   /** Timers pendientes, para poder cancelarlos si el componente se destruye. */
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
-  /** Timer del desvanecido en curso, para poder cancelarlo si el usuario cierra antes. */
-  private fadeTimer: ReturnType<typeof setTimeout> | undefined;
   /**
    * Elemento que capturó el puntero durante un arrastre. `null` significa que
    * no hay gesto en curso, y es la única fuente de verdad: todos los caminos de
@@ -61,13 +52,13 @@ export class App {
   private dragTarget: HTMLElement | null = null;
   private dragTimer: ReturnType<typeof setTimeout> | undefined;
   private interactive = false;
-  /** Evita que una segunda pulsación del atajo pise una interacción en curso. */
-  private busy = false;
 
-  protected readonly state = signal<MascotState>('idle');
-  protected readonly message = signal('');
-  protected readonly tone = signal<BubbleTone>('neutral');
-  protected readonly leaving = signal(false);
+  // El estado de la interacción se publica tal cual: la plantilla no cambia y
+  // el componente no necesita envolver señales que ya son suyas.
+  protected readonly state = this.interaction.state;
+  protected readonly message = this.interaction.message;
+  protected readonly tone = this.interaction.tone;
+  protected readonly leaving = this.interaction.leaving;
 
   /**
    * Modo dev de zonas: pinta los límites que no se ven (caja interactiva,
@@ -90,8 +81,10 @@ export class App {
   protected readonly frameSize = `${innerWidth} × ${innerHeight} px`;
 
   constructor() {
-    const stopHotkey = this.milo.onHotkey(() => this.runInteractionLoop());
-    const stopFailure = this.milo.onHotkeyFailed((failure) => this.reportHotkeyFailure(failure));
+    // `void`: el bucle no devuelve nada que la vista necesite, y sin este
+    // marcador el linter avisa de una promesa flotante.
+    const stopHotkey = this.milo.onHotkey(() => void this.interaction.start());
+    const stopFailure = this.milo.onHotkeyFailed((failure) => this.interaction.failHotkey(failure));
 
     // Mantiene al proceso main al día del estado. Allí vivirá la bandeja y el
     // registro de actividad más adelante. `effect` se vuelve a ejecutar cada vez
@@ -188,90 +181,17 @@ export class App {
     this.stopDrag();
   }
 
-  private runInteractionLoop(): void {
-    if (this.busy) return;
-    this.busy = true;
-    // Una interacción nueva manda: se lleva por delante el mensaje anterior
-    // aunque estuviera a medio desvanecer.
-    this.cancelFade();
-    this.message.set('');
-    this.leaving.set(false);
-    this.tone.set('neutral');
-    this.state.set('listening');
-
-    // SIMULADO: la fase 2 reemplaza esto por captura + VAD + Whisper, y la fase
-    // 3 por el router de intención. Los tiempos son visibles a propósito, para
-    // sentir el bucle antes de añadir latencia real.
-    this.after(1500, () => {
-      this.state.set('thinking');
-      this.after(900, () => {
-        this.state.set('acting');
-        this.message.set(
-          'Esa es la columna vertebral funcionando. Todavía no tengo oídos: eso llega en la fase 2.',
-        );
-        this.after(3200, () => {
-          this.state.set('idle');
-          this.busy = false;
-          this.scheduleDismiss();
-        });
-      });
-    });
-  }
-
-  /**
-   * Da unos segundos de lectura y luego desvanece la burbuja.
-   *
-   * El reloj arranca al volver a `idle`, no al aparecer el texto: así el usuario
-   * siempre tiene el mismo tiempo de lectura, sin importar cuánto dure la
-   * animación de `acting`. Cuando la fase 3 devuelva respuestas largas, este es
-   * el sitio para calcular el tiempo según la longitud del texto.
-   */
-  private scheduleDismiss(): void {
-    this.fadeTimer = this.after(BUBBLE_VISIBLE_MS, () => this.startFade());
-  }
-
-  /** El usuario pulsó la (x): no esperamos los cuatro segundos de cortesía. */
+  /** La (x) de la burbuja: el bucle decide si se puede cerrar y cómo. */
   protected closeBubble(): void {
-    // Si ya se está desvaneciendo, dejamos que termine: reiniciar el timer
-    // dejaría el mensaje huérfano en pantalla.
-    if (this.leaving()) return;
-    this.cancelFade();
-    this.startFade();
-  }
-
-  private startFade(): void {
-    if (!this.message() || this.leaving()) return;
-    this.leaving.set(true);
-    this.fadeTimer = this.after(BUBBLE_FADE_MS, () => {
-      this.message.set('');
-      this.leaving.set(false);
-      this.fadeTimer = undefined;
-    });
-  }
-
-  private cancelFade(): void {
-    if (this.fadeTimer === undefined) return;
-    clearTimeout(this.fadeTimer);
-    this.timers.delete(this.fadeTimer);
-    this.fadeTimer = undefined;
+    this.interaction.closeBubble();
   }
 
   private cancelDragTimer(): void {
     if (this.dragTimer === undefined) return;
+
     clearTimeout(this.dragTimer);
     this.timers.delete(this.dragTimer);
     this.dragTimer = undefined;
-  }
-
-  private reportHotkeyFailure(failure: HotkeyRegistration): void {
-    this.state.set('error');
-    this.tone.set('error');
-    this.message.set(
-      `No puedo registrar ${failure.accelerator}. Otra aplicación ya lo está usando; elige otra combinación.`,
-    );
-    this.after(4200, () => {
-      this.state.set('idle');
-    });
   }
 
   /**
@@ -285,6 +205,7 @@ export class App {
       this.timers.delete(timer);
       action();
     }, delay);
+
     this.timers.add(timer);
     return timer;
   }

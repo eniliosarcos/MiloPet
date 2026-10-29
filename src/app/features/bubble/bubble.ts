@@ -1,12 +1,10 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
-/**
- * Los tonos que entiende la burbuja. Se modelan como unión de literales, no como
- * un string libre, para que `tone="errr"` sea un error de compilación.
- */
-export type BubbleTone = 'neutral' | 'error';
+import type { MessageTone } from '../../core/interaction/interaction';
 
-/** La única salida de Milo: una burbuja de texto. Sin voz, por decisión. */
+/**
+ * La única salida de Milo: una burbuja de texto. Sin voz, por decisión.
+ */
 @Component({
   selector: 'app-bubble',
   templateUrl: './bubble.html',
@@ -16,7 +14,8 @@ export type BubbleTone = 'neutral' | 'error';
 export class Bubble {
   /** `required`: no existe una burbuja vacía. Quien la usa debe pasar texto. */
   readonly text = input.required<string>();
-  readonly tone = input<BubbleTone>('neutral');
+  /** El tono es semántico: lo decide el bucle, la burbuja solo lo pinta. */
+  readonly tone = input<MessageTone>('neutral');
   /** Mientras es true, la burbuja se está desvaneciendo. El padre la retira al acabar. */
   readonly leaving = input(false);
   /** El usuario pidió cerrarla antes de que se desvanezca sola. */

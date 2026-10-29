@@ -3,6 +3,7 @@ import { vi } from 'vitest';
 
 import type { MiloBridge } from '../shared/ipc';
 import { App } from './app';
+import { VOICE, type CaptureResult, type VoiceCapture } from './core/audio/capture';
 import { MILO } from './core/milo/milo-bridge';
 
 /**
@@ -57,6 +58,72 @@ function createFakeBridge() {
 }
 
 /**
+ * Micrófono de mentira.
+ *
+ * jsdom no tiene `getUserMedia`, y aunque lo tuviera no queremos un dispositivo
+ * real en CI. El test decide cuándo termina la frase (`heard`), cuándo no se dijo
+ * nada (`silent`) y cuándo el permiso falla (`broken`).
+ */
+function createFakeVoice() {
+  let settle: ((result: CaptureResult) => void) | null = null;
+  let reject: ((error: Error) => void) | null = null;
+  let listening = false;
+
+  const capture: VoiceCapture = {
+    listen() {
+      listening = true;
+      return new Promise<CaptureResult>((resolve, fail) => {
+        settle = (result) => {
+          listening = false;
+          settle = null;
+          reject = null;
+          resolve(result);
+        };
+        reject = (error) => {
+          listening = false;
+          settle = null;
+          reject = null;
+          fail(error);
+        };
+      });
+    },
+    dispose() {
+      listening = false;
+      settle = null;
+      reject = null;
+    },
+  };
+
+  return {
+    capture,
+    get listening() {
+      return listening;
+    },
+    heard(durationMs = 1200) {
+      settle?.({ heardSpeech: true, durationMs });
+    },
+    silent() {
+      settle?.({ heardSpeech: false, durationMs: 6000 });
+    },
+    broken(message = 'No tengo permiso para usar el micrófono.') {
+      reject?.(new Error(message));
+    },
+  };
+}
+
+/**
+ * Deja correr las microtareas.
+ *
+ * El bucle espera a la captura antes de pasar a `thinking`; el resultado de esa
+ * promesa no llega en el mismo tick en que el test la resuelve. `advanceTimers`
+ * no toca las microtareas, así que hacen falta dos vueltas.
+ */
+async function flush(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
+/**
  * jsdom no implementa la captura de puntero. El componente la usa para no
  * perder el gesto cuando el cursor sale de la ventana, así que aquí se simula:
  * lo que se prueba es la máquina de estados, no la implementación del navegador.
@@ -80,29 +147,42 @@ function pointer(type: string, init: MouseEventInit = {}, pointerId = 1): MouseE
   return event;
 }
 
-/** Tiempos del bucle, repetidos aquí a propósito: si cambian en `app.ts`, el test falla. */
-const LISTENING_MS = 1500;
+/**
+ * Tiempos del bucle, repetidos aquí a propósito: si cambian en
+ * `core/interaction/interaction.ts`, el test falla.
+ *
+ * `listening` ya no está: su duración la decide el VAD, no una constante.
+ */
 const THINKING_MS = 900;
 const ACTING_MS = 3200;
 const BUBBLE_VISIBLE_MS = 4000;
 const BUBBLE_FADE_MS = 420;
+const ERROR_MS = 4200;
 const DRAG_MAX_MS = 30_000;
 
 const findBubble = (fixture: ComponentFixture<App>) =>
   fixture.nativeElement.querySelector('.bubble') as HTMLElement | null;
 
+const stateOf = (fixture: ComponentFixture<App>) =>
+  (fixture.nativeElement.querySelector('.stage') as HTMLElement).getAttribute('data-state');
+
 describe('App', () => {
   let fake: ReturnType<typeof createFakeBridge>;
+  let voice: ReturnType<typeof createFakeVoice>;
 
   beforeEach(async () => {
     fake = createFakeBridge();
+    voice = createFakeVoice();
     stubPointerCapture();
 
     await TestBed.configureTestingModule({
       imports: [App],
       // El token MILO se reemplaza por el falso: la app no sabe que no hay
-      // Electron detrás.
-      providers: [{ provide: MILO, useValue: fake.bridge }],
+      // Electron detrás. Lo mismo con el micrófono, que en jsdom no existe.
+      providers: [
+        { provide: MILO, useValue: fake.bridge },
+        { provide: VOICE, useValue: voice.capture },
+      ],
     }).compileComponents();
   });
 
@@ -114,8 +194,7 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
 
-    const stage = fixture.nativeElement.querySelector('.stage') as HTMLElement;
-    expect(stage.getAttribute('data-state')).toBe('idle');
+    expect(stateOf(fixture)).toBe('idle');
     expect(fixture.nativeElement.querySelector('app-mascot')).toBeTruthy();
   });
 
@@ -126,25 +205,50 @@ describe('App', () => {
     fake.pressHotkey();
     fixture.detectChanges();
 
-    const stage = fixture.nativeElement.querySelector('.stage') as HTMLElement;
-    expect(stage.getAttribute('data-state')).toBe('listening');
+    // `listening` significa "micrófono abierto", no "esperando 1,5 s".
+    expect(stateOf(fixture)).toBe('listening');
+    expect(voice.listening).toBe(true);
   });
 
-  it('muestra el mensaje al actuar y lo desvanece solo', () => {
+  it('sigue escuchando hasta que el VAD cierra la frase', async () => {
     vi.useFakeTimers();
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
 
     fake.pressHotkey();
     fixture.detectChanges();
-    vi.advanceTimersByTime(LISTENING_MS + THINKING_MS);
+
+    // El reloj avanza y el estado no cambia: no hay constante que lo apague.
+    vi.advanceTimersByTime(5000);
+    fixture.detectChanges();
+    expect(stateOf(fixture)).toBe('listening');
+
+    voice.heard();
+    await flush();
+    fixture.detectChanges();
+    expect(stateOf(fixture)).toBe('thinking');
+  });
+
+  it('muestra el mensaje al actuar y lo desvanece solo', async () => {
+    vi.useFakeTimers();
+    const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
 
-    expect(findBubble(fixture)?.textContent?.trim()).toContain('columna vertebral');
+    fake.pressHotkey();
+    fixture.detectChanges();
+    voice.heard();
+    await flush();
+    fixture.detectChanges();
+
+    vi.advanceTimersByTime(THINKING_MS);
+    fixture.detectChanges();
+    expect(stateOf(fixture)).toBe('acting');
+    expect(findBubble(fixture)?.textContent?.trim()).toContain('todavía no entiendo palabras');
 
     // Vuelve a idle y arranca la cuenta de lectura.
     vi.advanceTimersByTime(ACTING_MS);
     fixture.detectChanges();
+    expect(stateOf(fixture)).toBe('idle');
     expect(findBubble(fixture)).not.toBeNull();
 
     // Un segundo antes del límite el mensaje sigue entero.
@@ -163,14 +267,85 @@ describe('App', () => {
     expect(findBubble(fixture)).toBeNull();
   });
 
-  it('deja que la (x) cierre el mensaje antes de tiempo', () => {
+  it('no responde si no se oyó nada', async () => {
     vi.useFakeTimers();
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
 
     fake.pressHotkey();
     fixture.detectChanges();
-    vi.advanceTimersByTime(LISTENING_MS + THINKING_MS);
+    voice.silent();
+    await flush();
+    fixture.detectChanges();
+
+    // Pulsar y callarse no es un error: se vuelve a idle sin mensaje.
+    expect(stateOf(fixture)).toBe('idle');
+    expect(findBubble(fixture)).toBeNull();
+
+    // Y el bucle queda libre para la siguiente pulsación.
+    fake.pressHotkey();
+    fixture.detectChanges();
+    expect(stateOf(fixture)).toBe('listening');
+  });
+
+  it('cuenta el fallo del micrófono y aparta el mensaje solo', async () => {
+    vi.useFakeTimers();
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    fake.pressHotkey();
+    fixture.detectChanges();
+    voice.broken();
+    await flush();
+    fixture.detectChanges();
+
+    expect(stateOf(fixture)).toBe('error');
+    expect(findBubble(fixture)?.getAttribute('data-tone')).toBe('error');
+    expect(findBubble(fixture)?.textContent?.trim()).toContain('permiso');
+
+    // Un mensaje de error no puede quedarse en pantalla para siempre: ese era
+    // el defecto de la primera versión.
+    vi.advanceTimersByTime(ERROR_MS);
+    fixture.detectChanges();
+    expect(stateOf(fixture)).toBe('idle');
+    expect(findBubble(fixture)).not.toBeNull();
+
+    vi.advanceTimersByTime(BUBBLE_VISIBLE_MS + BUBBLE_FADE_MS);
+    fixture.detectChanges();
+    expect(findBubble(fixture)).toBeNull();
+  });
+
+  it('una segunda pulsación mientras escucha no abre otra captura', async () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    fake.pressHotkey();
+    fixture.detectChanges();
+    expect(stateOf(fixture)).toBe('listening');
+
+    fake.pressHotkey();
+    fixture.detectChanges();
+
+    // Dos capturas simultáneas se pelearían por el micrófono y una de las dos
+    // se quedaría esperando para siempre.
+    voice.heard();
+    await flush();
+    fixture.detectChanges();
+    expect(stateOf(fixture)).toBe('thinking');
+  });
+
+  it('deja que la (x) cierre el mensaje antes de tiempo', async () => {
+    vi.useFakeTimers();
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    fake.pressHotkey();
+    fixture.detectChanges();
+    voice.heard();
+    await flush();
+    fixture.detectChanges();
+
+    vi.advanceTimersByTime(THINKING_MS);
     fixture.detectChanges();
 
     const close = fixture.nativeElement.querySelector('.bubble__close') as HTMLButtonElement;
@@ -186,14 +361,18 @@ describe('App', () => {
     expect(findBubble(fixture)).toBeNull();
   });
 
-  it('la (x) vive dentro de una zona interactiva o sería un botón muerto en Electron', () => {
+  it('la (x) vive dentro de una zona interactiva o sería un botón muerto en Electron', async () => {
     vi.useFakeTimers();
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
 
     fake.pressHotkey();
     fixture.detectChanges();
-    vi.advanceTimersByTime(LISTENING_MS + THINKING_MS);
+    voice.heard();
+    await flush();
+    fixture.detectChanges();
+
+    vi.advanceTimersByTime(THINKING_MS);
     fixture.detectChanges();
 
     // `app.ts` desbloquea los clics de la ventana solo donde `elementFromPoint`
@@ -204,14 +383,18 @@ describe('App', () => {
     expect(wrapper.contains(fixture.nativeElement.querySelector('.bubble__close'))).toBe(true);
   });
 
-  it('una pulsación nueva descarta el mensaje que estaba desvaneciéndose', () => {
+  it('una pulsación nueva descarta el mensaje que estaba desvaneciéndose', async () => {
     vi.useFakeTimers();
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
 
     fake.pressHotkey();
     fixture.detectChanges();
-    vi.advanceTimersByTime(LISTENING_MS + THINKING_MS + ACTING_MS);
+    voice.heard();
+    await flush();
+    fixture.detectChanges();
+
+    vi.advanceTimersByTime(THINKING_MS + ACTING_MS);
     fixture.detectChanges();
 
     const close = fixture.nativeElement.querySelector('.bubble__close') as HTMLButtonElement;
@@ -225,9 +408,12 @@ describe('App', () => {
     fixture.detectChanges();
     expect(findBubble(fixture)).toBeNull();
 
-    vi.advanceTimersByTime(LISTENING_MS + THINKING_MS);
+    voice.heard();
+    await flush();
     fixture.detectChanges();
-    expect(findBubble(fixture)?.textContent?.trim()).toContain('columna vertebral');
+    vi.advanceTimersByTime(THINKING_MS);
+    fixture.detectChanges();
+    expect(findBubble(fixture)?.textContent?.trim()).toContain('todavía no entiendo palabras');
   });
 
   it('arrastra la ventana por IPC: pointerdown, pasos y pointerup', () => {
