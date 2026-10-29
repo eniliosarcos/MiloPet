@@ -52,6 +52,16 @@ export class App {
   protected readonly tone = signal<BubbleTone>('neutral');
   protected readonly leaving = signal(false);
 
+  /**
+   * Modo dev de zonas: pinta los límites que no se ven (caja interactiva,
+   * región de arrastre y alcance de la mirada). Se enciende con `?zones=1` en
+   * la URL; en la ventana real lo añade `MILOPET_ZONES=1` (`npm run dev:zones`).
+   *
+   * No hay atajo de teclado a propósito: la ventana es click-through y casi
+   * nunca tiene el foco, así que un `keydown` sería un botón muerto.
+   */
+  protected readonly zones = signal(new URLSearchParams(location.search).has('zones'));
+
   constructor() {
     const stopHotkey = this.milo.onHotkey(() => this.runInteractionLoop());
     const stopFailure = this.milo.onHotkeyFailed((failure) => this.reportHotkeyFailure(failure));

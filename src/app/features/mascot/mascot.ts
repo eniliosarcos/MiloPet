@@ -10,7 +10,16 @@ import {
 } from '@angular/core';
 
 import type { MascotState } from '../../../shared/ipc';
-import { GAZE_MAX, GAZE_VERTICAL, eyeScales, gazeToward, type EyeScale, type Gaze } from './gaze';
+import {
+  GAZE_MAX,
+  GAZE_RANGE,
+  GAZE_REACH,
+  GAZE_VERTICAL,
+  eyeScales,
+  gazeToward,
+  type EyeScale,
+  type Gaze,
+} from './gaze';
 
 /** Lado del `viewBox` del SVG. Todas las coordenadas del dibujo viven aquí. */
 const VIEWBOX = 200;
@@ -38,8 +47,26 @@ const EYE_Y = 108;
 export class Mascot {
   readonly state = input<MascotState>('idle');
 
+  /**
+   * Overlay de depuración (`?zones=1`): dibuja el alcance de la mirada y el
+   * punto donde se satura. Sirve para ajustar `GAZE_REACH` viendo el círculo,
+   * no adivinando con números.
+   */
+  readonly zones = input(false);
+
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly gaze = signal<Gaze | null>(null);
+
+  /**
+   * Los mismos radios que usa `gazeToward`, convertidos a unidades del viewBox.
+   * El overlay los lee de aquí y no de una copia: si alguien cambia la fórmula,
+   * el círculo se mueve con ella.
+   */
+  protected readonly gazeZones = {
+    reach: GAZE_REACH * VIEWBOX,
+    range: GAZE_RANGE * VIEWBOX,
+    centerY: EYE_Y,
+  };
 
   /** Con el cursor cerca, el barrido automático de CSS se apaga. */
   protected readonly tracking = computed(() => this.gaze() !== null);

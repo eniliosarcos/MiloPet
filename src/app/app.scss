@@ -99,3 +99,26 @@
   -webkit-app-region: drag;
   app-region: drag;
 }
+
+/**
+ * Overlay de zonas (`?zones=1`, o `npm run dev:zones`).
+ *
+ * Pinta los dos elementos reales en vez de dibujar una copia de su geometría.
+ * Un overlay que recalcula los rectángulos miente en cuanto alguien mueve el
+ * original, y ese es exactamente el fallo que este modo existe para encontrar:
+ * la caja interactiva y la de arrastre se separaron sin que nada avisara.
+ *
+ * `z-index` solo aquí porque el SVG del personaje se pinta después en el DOM y
+ * taparía el relleno rojo del agarre. Fuera del modo dev el hotspot sigue
+ * transparente, así que no cambia nada visible.
+ */
+.stage--zones .hotspot {
+  z-index: 2;
+  background: rgba(56, 189, 248, 0.2);
+  outline: 1px dashed #38bdf8;
+}
+
+.stage--zones .hotspot__grip {
+  background: rgba(244, 63, 94, 0.35);
+  outline: 1px solid #f43f5e;
+}

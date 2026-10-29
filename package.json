@@ -10,6 +10,7 @@
     "dev:web": "ng serve",
     "dev:milo": "npm run build:electron && wait-on tcp:4200 && cross-env MILOPET_DEV=1 electron .",
     "dev:debug": "npm run build:electron && wait-on tcp:4200 && cross-env MILOPET_DEV=1 electron . --remote-debugging-port=9222",
+    "dev:zones": "cross-env MILOPET_ZONES=1 npm run dev",
     "build:electron": "tsc -p tsconfig.electron.json",
     "build": "npm run build:electron && ng build",
     "preview": "npm run build && cross-env MILOPET_DEV=0 electron .",

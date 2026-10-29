@@ -267,3 +267,31 @@
     transform: translateY(-10px) scale(0.97, 1.04);
   }
 }
+
+/**
+ * Overlay de zonas (`?zones=1`). Trazo fino y discontinuo a propósito: tiene
+ * que leerse como una guía, no como parte del dibujo. `non-scaling-stroke`
+ * mantiene el grosor en píxeles aunque el SVG se escale a 272 px.
+ */
+.mascot__zones {
+  pointer-events: none;
+}
+
+.mascot__zone {
+  fill: none;
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.mascot__zone--range {
+  stroke: #facc15;
+}
+
+.mascot__zone--reach {
+  stroke: #22c55e;
+}
+
+.mascot__zone-center {
+  fill: #22c55e;
+}

@@ -2,7 +2,7 @@
   El escenario. `data-state` en el contenedor permite que el CSS reaccione al
   estado sin que cada hijo tenga que conocerlo.
 -->
-<main class="stage" [attr.data-state]="state()">
+<main class="stage" [attr.data-state]="state()" [class.stage--zones]="zones()">
   <!-- La burbuja solo existe cuando hay algo que decir: nunca se ve vacía. -->
   <div class="stage__bubble">
     @if (message()) {
@@ -21,5 +21,5 @@
     <div class="hotspot__grip"></div>
   </div>
 
-  <app-mascot class="stage__mascot" [state]="state()" />
+  <app-mascot class="stage__mascot" [state]="state()" [zones]="zones()" />
 </main>

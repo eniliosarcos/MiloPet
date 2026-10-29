@@ -83,4 +83,25 @@
       <path class="mascot__mouth" d="M90 142 Q100 152 110 142" />
     </g>
   </g>
+
+  <!-- Overlay de depuración (`?zones=1`). Los radios vienen de `gaze.ts`, así
+       que el círculo verde es exactamente donde la mirada se satura y el
+       amarillo donde se suelta. -->
+  @if (zones()) {
+    <g class="mascot__zones">
+      <circle
+        class="mascot__zone mascot__zone--range"
+        cx="100"
+        [attr.cy]="gazeZones.centerY"
+        [attr.r]="gazeZones.range"
+      />
+      <circle
+        class="mascot__zone mascot__zone--reach"
+        cx="100"
+        [attr.cy]="gazeZones.centerY"
+        [attr.r]="gazeZones.reach"
+      />
+      <circle class="mascot__zone-center" cx="100" [attr.cy]="gazeZones.centerY" r="2" />
+    </g>
+  }
 </svg>

@@ -113,7 +113,10 @@ export function createMascotWindow(): BrowserWindow {
   });
 
   if (process.env['MILOPET_DEV'] === '1') {
-    void win.loadURL(DEV_SERVER_URL);
+    // `?zones=1` enciende el overlay de depuración de zonas (ver `app.ts`).
+    // Solo tiene sentido en dev: es el servidor de Angular el que sirve la URL.
+    const url = process.env['MILOPET_ZONES'] === '1' ? `${DEV_SERVER_URL}?zones=1` : DEV_SERVER_URL;
+    void win.loadURL(url);
   } else {
     void win.loadFile(path.join(__dirname, '../../dist/MiloPet/browser/index.html'));
   }

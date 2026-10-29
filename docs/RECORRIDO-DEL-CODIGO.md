@@ -156,6 +156,11 @@ arrastre en zonas donde no había región de arrastre y el gesto "no respondía"
 sin ningún error. La cara queda fuera a propósito: sus `mousemove` son los que
 alimentan la mirada.
 
+Para verlo sin adivinar: `npm run dev:zones` (o `?zones=1` en la URL del dev
+server). Pinta el hotspot en azul, el agarre en rojo y, en el SVG, dos círculos
+con `GAZE_REACH` y `GAZE_RANGE` leídos de `gaze.ts`. El overlay no recalcula la
+geometría: colorea los elementos reales, así que no puede mentir.
+
 El detalle que confunde al principio: `pointer-events: none` está en el
 componente del personaje y `.hotspot` lo reactiva con `pointer-events: auto`. Si
 alguna vez "Milo no responde al ratón", revisa esos dos valores antes que

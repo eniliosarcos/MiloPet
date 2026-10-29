@@ -205,4 +205,24 @@ describe('App', () => {
     expect(grip).not.toBeNull();
     expect(grip?.closest('[data-interactive]')).not.toBeNull();
   });
+
+  it('el modo dev de zonas se enciende solo con ?zones=1', () => {
+    // El overlay no puede aparecer por accidente en la ventana real: se pinta
+    // encima del personaje y confundiría cualquier captura.
+    const plain = TestBed.createComponent(App);
+    plain.detectChanges();
+    expect(plain.nativeElement.querySelector('.mascot__zones')).toBeNull();
+
+    history.replaceState({}, '', '/?zones=1');
+    try {
+      const debug = TestBed.createComponent(App);
+      debug.detectChanges();
+
+      const stage = debug.nativeElement.querySelector('.stage') as HTMLElement;
+      expect(stage.classList.contains('stage--zones')).toBe(true);
+      expect(debug.nativeElement.querySelector('.mascot__zones')).not.toBeNull();
+    } finally {
+      history.replaceState({}, '', '/');
+    }
+  });
 });
