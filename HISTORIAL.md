@@ -8,6 +8,14 @@ Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 
 ## Historial
 
+### 2026-10-29 — Ojos más chicos y separación constante al mirar · fix
+
+**Qué:** Los ojos bajan al 90 % del dibujo original, y las dos escalas que los mueven —la perspectiva de la mirada y el 6 % de `listening`— anclan el borde interno de cada ojo en vez de su centro.
+**Por qué:** se veían grandes, y al seguir el cursor el ojo lejano se separaba un 31 % (10,3 → 13,5 unidades del viewBox): se leía más lejos de lo que estaba.
+**Tocó:** `src/app/features/mascot/mascot.html`, `mascot.scss`, `docs/ARQUITECTURA.md`.
+**Aprendido:** escalar desde el centro corre los dos bordes internos hacia fuera; anclarlos deja la separación en 10,0 unidades y manda todo el cambio al contorno exterior. Son tres grupos por ojo (`eye-state`, `eye-scaler` y el propio `eye`) porque cada `transform` tiene un solo dueño: estado, mirada y parpadeo.
+**Commits:** `c8e1899`, `c64892f`, `84702b8`
+
 ### 2026-10-29 — El arrastre pasa por IPC y desaparece la franja muerta · feat
 
 **Qué:** Todo el hotspot arrastra la ventana por tres canales (`dragStart`, `dragMove`, `dragEnd`); el main relee `screen.getCursorScreenPoint()` y mueve con el delta desde el origen, y la posición se guarda una sola vez al soltar.
