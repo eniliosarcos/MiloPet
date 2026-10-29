@@ -8,13 +8,13 @@ Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 
 ## Historial
 
-### 2026-10-29 — El ojo que se aleja se encoge · feat
+### 2026-10-29 — El ojo que apunta al cursor se encoge · feat
 
-**Qué:** Mientras los ojos siguen al cursor, el que queda al lado contrario de la mirada pierde hasta un 10 % de tamaño, con transición de 420 ms.
+**Qué:** Mientras los ojos siguen al cursor, el ojo que queda hacia ese lado pierde hasta un 10 % de tamaño, con transición de 420 ms.
 **Por qué:** los dos ojos se desplazaban igual y el gesto se leía como un desplazamiento plano, no como una cara que se vuelve.
 **Tocó:** `src/app/features/mascot/gaze.ts`, `mascot.ts`, `mascot.html`, `mascot.scss`, tests.
-**Aprendido:** `scale` es una propiedad individual y se multiplica con el `transform` del parpadeo y el `translate` del barrido, así que añade volumen sin tocar las animaciones existentes; la escala depende de la dirección (`gaze.x`), no de la distancia.
-**Commits:** `e7131be`
+**Aprendido:** `scale` es una propiedad individual y se multiplica con el `transform` del parpadeo y el `translate` del barrido, así que añade volumen sin tocar las animaciones existentes; la escala depende de la dirección (`gaze.x`), no de la distancia. Se encoge el ojo del lado al que mira: la primera versión encogía el contrario y el giro se leía al revés.
+**Commits:** `e7131be..e524003`
 
 ### 2026-10-29 — La mirada vuelve al centro despacio · fix
 
