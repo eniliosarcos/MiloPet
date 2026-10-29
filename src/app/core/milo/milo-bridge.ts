@@ -54,6 +54,17 @@ function createBrowserBridge(): MiloBridge {
       config = { ...config, hotkey: accelerator };
       return { ok: true, accelerator };
     },
+    startDrag() {
+      // En un navegador no hay ventana de Electron que mover. El gesto sigue
+      // funcionando en la página (captura de puntero incluida), solo que sin
+      // efecto visible.
+    },
+    moveDrag() {
+      // Ver `startDrag`: no hay proceso main al que pedir el movimiento.
+    },
+    endDrag() {
+      // Ver `startDrag`: no hay posición que guardar.
+    },
     setState() {
       // No hay proceso main al que informar.
     },

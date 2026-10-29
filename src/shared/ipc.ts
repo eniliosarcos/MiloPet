@@ -18,6 +18,12 @@ export const CHANNELS = {
   getConfig: 'milo:get-config',
   /** renderer -> main: guarda un atajo nuevo y lo vuelve a registrar. */
   setHotkey: 'milo:set-hotkey',
+  /** renderer -> main: empieza un arrastre; el main fija el punto de origen. */
+  dragStart: 'milo:drag-start',
+  /** renderer -> main: ha habido movimiento; el main relee el cursor y mueve. */
+  dragMove: 'milo:drag-move',
+  /** renderer -> main: fin del arrastre; el main guarda la posición. */
+  dragEnd: 'milo:drag-end',
   /** renderer -> main: informa el estado actual (se usa para trazas y logs). */
   state: 'milo:state',
   /** renderer -> main: cierra la aplicación. */
@@ -64,6 +70,20 @@ export interface MiloBridge {
 
   getConfig(): Promise<MiloConfig>;
   setHotkey(accelerator: string): Promise<HotkeyRegistration>;
+
+  /**
+   * Arrastre de la ventana. El renderer solo avisa de que el gesto empieza,
+   * avanza y termina: no manda coordenadas.
+   *
+   * La geometría vive en el proceso main a propósito. `clientX` es relativo a
+   * una ventana que se está moviendo (se realimenta y tiembla), así que el main
+   * lee `screen.getCursorScreenPoint()` y mueve con un delta desde el origen.
+   * Ambos extremos hablan en DIP, la unidad de las ventanas de Electron, y por
+   * eso no hay `scaleFactor` que aplicar.
+   */
+  startDrag(): void;
+  moveDrag(): void;
+  endDrag(): void;
 
   setState(state: MascotState): void;
 

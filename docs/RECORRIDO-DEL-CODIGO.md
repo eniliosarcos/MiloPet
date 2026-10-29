@@ -124,10 +124,10 @@ funcione la (x)). La segunda existe solo mientras hay un mensaje en pantalla.
 
 Ese mismo `mousemove` es el que permite arrastrar: la ventana tiene que ser
 interactiva **antes** de que pulses el botón, porque mientras es click-through el
-sistema manda el clic al programa de detrás. Y aquí hay una trampa: una región
-`app-region: drag` ignora todos los eventos de puntero, así que si cubriera el
-hotspot entero, el aviso que desbloquea los clics dejaría de llegar. Por eso el
-agarre está metido 8 px: el anillo exterior mantiene la cadena viva.
+sistema manda el clic al programa de detrás. El arrastre ya no lo resuelve el
+sistema operativo: `app-region: drag` ignoraba todos los eventos de puntero y
+obligaba a dejar una franja muerta, así que ahora lo mueve el proceso main por
+IPC (ver `electron/window.ts`, más abajo).
 
 Esos mismos eventos son los que alimentan los ojos de Milo (sección 5): mientras
 el cursor está dentro de la ventana, la mirada lo sigue. Fuera de ella el
@@ -141,34 +141,29 @@ Tres capas, en orden:
 
 1. `.stage__bubble` — arriba, la burbuja. Solo existe si `message()` tiene texto.
 2. `.hotspot` — un círculo invisible sobre la barriga. La zona cliqueable del
-   personaje (la burbuja trae la suya, para la (x)).
+   personaje y también la superficie de arrastre (la burbuja trae la suya, para
+   la (x)).
 3. `app-mascot` — el personaje, abajo.
 
-Dentro del hotspot vive `.hotspot__grip`, la franja que **arrastra la ventana**.
-Está metida 8 px a propósito: el sistema operativo resuelve el arrastre y, a
-cambio, esa zona deja de emitir eventos de puntero. El anillo exterior sobra para
-que `elementFromPoint` siga viendo el hotspot y la ventana acepte clics.
-
-El hotspot mide **lo mismo que el agarre más ese anillo**, y por eso vive en la
-barriga y no en el cuerpo entero: es la caja que pinta `cursor: grab`. Cuando
-medía 58 % llegaba hasta la frente y el pecho, así que el cursor prometía
-arrastre en zonas donde no había región de arrastre y el gesto "no respondía"
-sin ningún error. La cara queda fuera a propósito: sus `mousemove` son los que
-alimentan la mirada.
+El hotspot es la caja que pinta `cursor: grab`, así que lo que promete y lo que
+arrastra son exactamente lo mismo. Vive en la barriga y no en el cuerpo entero:
+si llegara a la frente, la ventana dejaría de ser click-through sobre la cara y
+un clic ahí no llegaría a la aplicación de detrás. Sus `mousemove` son, además,
+los que alimentan la mirada.
 
 Para verlo sin adivinar: `npm run dev:zones` (o `?zones=1` en la URL del dev
-server). Pinta el hotspot en azul, el agarre en rojo y, en el SVG, dos círculos
-con `GAZE_REACH` y `GAZE_RANGE` leídos de `gaze.ts`. El borde violeta con el
-tamaño en píxeles es la ventana entera, o sea el mundo de Milo: sirve para saber
-contra qué caja se están midiendo esos porcentajes. El overlay no recalcula la
-geometría: colorea los elementos reales, así que no puede mentir.
+server). Pinta el hotspot en azul y, en el SVG, dos círculos con `GAZE_REACH` y
+`GAZE_RANGE` leídos de `gaze.ts`. El borde violeta con el tamaño en píxeles es la
+ventana entera, o sea el mundo de Milo: sirve para saber contra qué caja se están
+midiendo esos porcentajes. El overlay no recalcula la geometría: colorea los
+elementos reales, así que no puede mentir.
 
 El detalle que confunde al principio: `pointer-events: none` está en el
 componente del personaje y `.hotspot` lo reactiva con `pointer-events: auto`. Si
 alguna vez "Milo no responde al ratón", revisa esos dos valores antes que
-cualquier otra cosa. Y si "no se deja arrastrar", comprueba que el agarre sigue
-dentro del hotspot: sin `data-interactive` alrededor, la ventana nunca se vuelve
-interactiva y el clic se va al programa de detrás.
+cualquier otra cosa. Y si "no se deja arrastrar", comprueba que el hotspot sigue
+llevando `data-interactive`: sin eso la ventana nunca se vuelve interactiva y el
+`pointerdown` se va al programa de detrás.
 
 `data-state` en el `<main>` es solo informativo (los tests lo usan para
 comprobar la máquina de estados). La animación real la dispara el `data-state`
@@ -323,21 +318,30 @@ Y no siempre arranca en la esquina: `initialPosition()` lee la última posición
 `config.json` y comprueba que al menos `MIN_VISIBLE` (80 px) caigan dentro de algún
 monitor. Esa validación existe porque la ventana lleva `skipTaskbar: true` y un
 Milo restaurado fuera de pantalla no se puede recuperar: no hay dónde hacer clic.
-Cuándo se guarda esa posición se explica abajo, en `moved`.
+Cuándo se guarda esa posición se explica abajo, en el arrastre por IPC.
 
-### `moved` — guardar dónde lo soltaste
+### El arrastre por IPC — tres canales y un delta
+
+El renderer manda intención, no geometría:
 
 ```ts
-win.on('moved', () => {
-  const { x, y } = win.getBounds();
-  writeConfig({ position: { x, y } });
-});
+ipcMain.on(CHANNELS.dragStart, () => startWindowDrag());
+ipcMain.on(CHANNELS.dragMove, () => moveWindowDrag());
+ipcMain.on(CHANNELS.dragEnd, () => endWindowDrag());
 ```
 
-`moved` llega **una sola vez, al soltar** el arrastre (en Windows y macOS; en
-Linux el evento es `move` y llega en cada paso). No hay canal IPC: el renderer no
-sabe que la ventana se movió y no le hace falta. Guardar en cada `move` habría
-escrito el disco decenas de veces por segundo.
+`startWindowDrag()` guarda el cursor y la posición de la ventana en el mismo
+instante. Cada `dragMove` relee `screen.getCursorScreenPoint()` y mueve con el
+delta desde ese origen. No se usa `clientX`: es relativo a la ventana que se está
+moviendo, se realimenta y tiembla. Tampoco hay `scaleFactor` que aplicar, porque
+el cursor de `screen` y los bounds de la ventana son los dos DIP.
+
+`dragEnd` cierra el gesto y guarda la posición en `config.json`. No se guarda en
+`moved`: con `setPosition` en cada paso, `moved` puede llegar decenas de veces por
+segundo y escribir el disco a ese ritmo. El renderer cierra el gesto por cinco
+caminos (`pointerup`, `pointercancel`, `lostpointercapture`, `blur` y un tope de
+30 s) para que un `pointerup` perdido no deje la ventana pegada al ratón; todos
+pasan por `stopDrag()`, que es idempotente.
 
 ### `hotkey.ts` — el atajo
 
@@ -397,19 +401,19 @@ cambia de sitio.
 
 ## 10. Glosario mínimo
 
-| Término      | Traducción mental                                          |
-| ------------ | ---------------------------------------------------------- |
-| **Renderer** | La parte visual: Angular dentro de Chromium.               |
-| **Main**     | La parte con permisos: Node dentro de Electron.            |
-| **Preload**  | El portero entre ambos.                                    |
-| **IPC**      | El "tubo" por donde viajan mensajes entre main y renderer. |
-| **Signal**   | Una variable que avisa cuando cambia.                      |
-| **Effect**   | Código que se ejecuta solo cuando cambia un signal.        |
-| **OnPush**   | "No revises mi vista si no cambió nada".                   |
-| **CSP**      | Lista de qué puede cargar la página.                       |
-| **VAD**      | Detección de voz: saber cuándo hablas y cuándo callas.     |
-| **STT**      | Voz a texto (Whisper).                                     |
-| **Hotspot**  | La zona cliqueable: hay dos, el personaje y la burbuja.    |
+| Término      | Traducción mental                                            |
+| ------------ | ------------------------------------------------------------ |
+| **Renderer** | La parte visual: Angular dentro de Chromium.                 |
+| **Main**     | La parte con permisos: Node dentro de Electron.              |
+| **Preload**  | El portero entre ambos.                                      |
+| **IPC**      | El "tubo" por donde viajan mensajes entre main y renderer.   |
+| **Signal**   | Una variable que avisa cuando cambia.                        |
+| **Effect**   | Código que se ejecuta solo cuando cambia un signal.          |
+| **OnPush**   | "No revises mi vista si no cambió nada".                     |
+| **CSP**      | Lista de qué puede cargar la página.                         |
+| **VAD**      | Detección de voz: saber cuándo hablas y cuándo callas.       |
+| **STT**      | Voz a texto (Whisper).                                       |
+| **Hotspot**  | La zona cliqueable y arrastrable: el personaje y la burbuja. |
 
 ---
 

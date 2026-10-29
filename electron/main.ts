@@ -3,7 +3,14 @@ import { app, ipcMain, Menu } from 'electron';
 import { CHANNELS, type MascotState } from '../src/shared/ipc';
 import { readConfig, writeConfig } from './config';
 import { disposeHotkeys, registerHotkey } from './hotkey';
-import { createMascotWindow, getMascotWindow, sendToRenderer } from './window';
+import {
+  createMascotWindow,
+  endWindowDrag,
+  getMascotWindow,
+  moveWindowDrag,
+  sendToRenderer,
+  startWindowDrag,
+} from './window';
 
 /** Último estado informado por el renderer. Lo usará la capa de bandeja y logs. */
 let lastState: MascotState = 'idle';
@@ -43,6 +50,12 @@ function registerIpc(): void {
     // es click-through; eso es lo que permite que el personaje "note" el cursor.
     win?.setIgnoreMouseEvents(!interactive, { forward: true });
   });
+
+  // El renderer no manda coordenadas: solo dice cuándo empieza, avanza y
+  // termina el gesto. La geometría y el cursor de pantalla viven aquí.
+  ipcMain.on(CHANNELS.dragStart, () => startWindowDrag());
+  ipcMain.on(CHANNELS.dragMove, () => moveWindowDrag());
+  ipcMain.on(CHANNELS.dragEnd, () => endWindowDrag());
 
   ipcMain.on(CHANNELS.state, (_event, state: MascotState) => {
     lastState = state;

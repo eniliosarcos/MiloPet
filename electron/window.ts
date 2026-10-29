@@ -22,6 +22,21 @@ interface Point {
   y: number;
 }
 
+/**
+ * Punto de partida de un arrastre.
+ *
+ * Se guarda el cursor y la ventana en el mismo instante, y cada paso mueve la
+ * ventana el delta del cursor desde ese origen. Así el desfase entre donde
+ * pulsaste y la esquina de la ventana se conserva solo, sin restarlo a mano ni
+ * acumular redondeos.
+ */
+interface DragOrigin {
+  cursor: Point;
+  window: Point;
+}
+
+let dragOrigin: DragOrigin | null = null;
+
 /** Esquina inferior derecha del monitor principal, con un margen. */
 function defaultPosition(): Point {
   const { workArea } = screen.getPrimaryDisplay();
@@ -104,13 +119,10 @@ export function createMascotWindow(): BrowserWindow {
 
   win.once('ready-to-show', () => win.show());
 
-  // `moved` se emite una sola vez, al soltar el arrastre (Windows y macOS; en
-  // Linux hay que escuchar `move`). Guardar aquí evita tener que añadir un canal
-  // IPC solo para "avisa de que me moví".
-  win.on('moved', () => {
-    const { x, y } = win.getBounds();
-    writeConfig({ position: { x, y } });
-  });
+  // La posición ya no se guarda desde `moved`: ahora el movimiento lo provoca
+  // `setPosition` en cada paso del arrastre, y `moved` puede dispararse en cada
+  // uno de esos pasos (decenas de escrituras de disco por segundo). Se guarda una
+  // sola vez en `endWindowDrag()`, que es el momento exacto en que se suelta.
 
   if (process.env['MILOPET_DEV'] === '1') {
     // `?zones=1` enciende el overlay de depuración de zonas (ver `app.ts`).
@@ -131,6 +143,47 @@ export function createMascotWindow(): BrowserWindow {
 
 export function getMascotWindow(): BrowserWindow | null {
   return mascotWindow;
+}
+
+/** Fija el origen del arrastre: cursor y ventana leídos en el mismo instante. */
+export function startWindowDrag(): void {
+  const win = mascotWindow;
+  if (!win || win.isDestroyed()) return;
+
+  const { x, y } = win.getBounds();
+  dragOrigin = { cursor: screen.getCursorScreenPoint(), window: { x, y } };
+}
+
+/**
+ * Mueve la ventana el delta del cursor desde el origen del arrastre.
+ *
+ * La posición se lee del sistema y no del evento del renderer: `clientX` es
+ * relativo a la ventana que se está moviendo, así que usarlo realimenta el
+ * movimiento y tiembla. `getCursorScreenPoint()` y los bounds de Electron hablan
+ * los dos en DIP, la misma unidad que espera `setPosition`, así que el
+ * `scaleFactor` del monitor no entra en la cuenta.
+ */
+export function moveWindowDrag(): void {
+  const win = mascotWindow;
+  if (!win || win.isDestroyed() || !dragOrigin) return;
+
+  const cursor = screen.getCursorScreenPoint();
+  win.setPosition(
+    dragOrigin.window.x + (cursor.x - dragOrigin.cursor.x),
+    dragOrigin.window.y + (cursor.y - dragOrigin.cursor.y),
+  );
+}
+
+/** Cierra el arrastre y persiste la posición, una sola vez. */
+export function endWindowDrag(): void {
+  if (!dragOrigin) return;
+  dragOrigin = null;
+
+  const win = mascotWindow;
+  if (!win || win.isDestroyed()) return;
+
+  const { x, y } = win.getBounds();
+  writeConfig({ position: { x, y } });
 }
 
 /** Envía un evento al renderer, tolerando una ventana que todavía no está lista. */

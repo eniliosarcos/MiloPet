@@ -14,6 +14,8 @@ import { MILO } from './core/milo/milo-bridge';
  */
 function createFakeBridge() {
   let press: (() => void) | null = null;
+  /** Pasos del arrastre en orden: `start`, `move`, `end`. */
+  const drag: string[] = [];
 
   const bridge: MiloBridge = {
     onHotkey(handler) {
@@ -34,6 +36,15 @@ function createFakeBridge() {
     async setHotkey(accelerator) {
       return { ok: true, accelerator };
     },
+    startDrag() {
+      drag.push('start');
+    },
+    moveDrag() {
+      drag.push('move');
+    },
+    endDrag() {
+      drag.push('end');
+    },
     setState() {
       /* sin efecto */
     },
@@ -42,7 +53,31 @@ function createFakeBridge() {
     },
   };
 
-  return { bridge, pressHotkey: () => press?.() };
+  return { bridge, drag, pressHotkey: () => press?.() };
+}
+
+/**
+ * jsdom no implementa la captura de puntero. El componente la usa para no
+ * perder el gesto cuando el cursor sale de la ventana, así que aquí se simula:
+ * lo que se prueba es la máquina de estados, no la implementación del navegador.
+ */
+function stubPointerCapture(): void {
+  Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', {
+    value: () => undefined,
+    writable: true,
+    configurable: true,
+  });
+}
+
+/**
+ * jsdom tampoco tiene `PointerEvent`. Un `MouseEvent` con `pointerId` añadido
+ * basta: Angular solo escucha el nombre del evento y el código lee `button`,
+ * `buttons` y `currentTarget`.
+ */
+function pointer(type: string, init: MouseEventInit = {}, pointerId = 1): MouseEvent {
+  const event = new MouseEvent(type, { bubbles: true, cancelable: true, ...init });
+  Object.defineProperty(event, 'pointerId', { value: pointerId });
+  return event;
 }
 
 /** Tiempos del bucle, repetidos aquí a propósito: si cambian en `app.ts`, el test falla. */
@@ -51,6 +86,7 @@ const THINKING_MS = 900;
 const ACTING_MS = 3200;
 const BUBBLE_VISIBLE_MS = 4000;
 const BUBBLE_FADE_MS = 420;
+const DRAG_MAX_MS = 30_000;
 
 const findBubble = (fixture: ComponentFixture<App>) =>
   fixture.nativeElement.querySelector('.bubble') as HTMLElement | null;
@@ -60,6 +96,7 @@ describe('App', () => {
 
   beforeEach(async () => {
     fake = createFakeBridge();
+    stubPointerCapture();
 
     await TestBed.configureTestingModule({
       imports: [App],
@@ -193,17 +230,83 @@ describe('App', () => {
     expect(findBubble(fixture)?.textContent?.trim()).toContain('columna vertebral');
   });
 
-  it('el agarre para arrastrar vive dentro de la zona interactiva', () => {
+  it('arrastra la ventana por IPC: pointerdown, pasos y pointerup', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
 
-    // `app-region: drag` solo arrastra si el sistema operativo puede hacer
-    // hit-test sobre la ventana, y eso depende de que el hotspot siga llevando
-    // `data-interactive`. Si alguien mueve el agarre fuera, el arrastre deja de
-    // arrancar sin lanzar ningún error: solo "no responde".
-    const grip = fixture.nativeElement.querySelector('.hotspot__grip') as HTMLElement | null;
-    expect(grip).not.toBeNull();
-    expect(grip?.closest('[data-interactive]')).not.toBeNull();
+    const hotspot = fixture.nativeElement.querySelector('.hotspot') as HTMLElement;
+    // El hotspot es la única superficie de arrastre. Si alguien quita
+    // `data-interactive`, la ventana nunca se vuelve interactiva y el
+    // `pointerdown` se va al escritorio: el gesto deja de arrancar sin error.
+    expect(hotspot.hasAttribute('data-interactive')).toBe(true);
+
+    hotspot.dispatchEvent(pointer('pointerdown', { button: 0, buttons: 1 }));
+    expect(fake.drag).toEqual(['start']);
+
+    hotspot.dispatchEvent(pointer('pointermove', { buttons: 1 }));
+    hotspot.dispatchEvent(pointer('pointermove', { buttons: 1 }));
+    expect(fake.drag).toEqual(['start', 'move', 'move']);
+
+    hotspot.dispatchEvent(pointer('pointerup', { buttons: 0 }));
+    expect(fake.drag).toEqual(['start', 'move', 'move', 'end']);
+  });
+
+  it('ignora los pasos de arrastre si no hay gesto en curso', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    const hotspot = fixture.nativeElement.querySelector('.hotspot') as HTMLElement;
+    hotspot.dispatchEvent(pointer('pointermove', { buttons: 1 }));
+    hotspot.dispatchEvent(pointer('pointerup', { buttons: 0 }));
+
+    // Sin `pointerdown` previo, el main no tiene origen de arrastre: mover sería
+    // un salto de la ventana a un punto arbitrario.
+    expect(fake.drag).toEqual([]);
+  });
+
+  it('un pointermove sin botón pulsado cierra el arrastre perdido', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    const hotspot = fixture.nativeElement.querySelector('.hotspot') as HTMLElement;
+    hotspot.dispatchEvent(pointer('pointerdown', { button: 0, buttons: 1 }));
+    expect(fake.drag).toEqual(['start']);
+
+    // El `pointerup` ocurrió fuera de la ventana y no llegó: el siguiente
+    // movimiento lo delata porque `buttons` ya vale 0.
+    hotspot.dispatchEvent(pointer('pointermove', { buttons: 0 }));
+    expect(fake.drag).toEqual(['start', 'end']);
+
+    // Y no sigue mandando pasos.
+    hotspot.dispatchEvent(pointer('pointermove', { buttons: 1 }));
+    expect(fake.drag).toEqual(['start', 'end']);
+  });
+
+  it('perder el foco cierra el arrastre aunque no llegue el pointerup', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    const hotspot = fixture.nativeElement.querySelector('.hotspot') as HTMLElement;
+    hotspot.dispatchEvent(pointer('pointerdown', { button: 0, buttons: 1 }));
+
+    window.dispatchEvent(new Event('blur'));
+    expect(fake.drag).toEqual(['start', 'end']);
+  });
+
+  it('el tope de tiempo cierra un arrastre que se quedó pegado', () => {
+    vi.useFakeTimers();
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    const hotspot = fixture.nativeElement.querySelector('.hotspot') as HTMLElement;
+    hotspot.dispatchEvent(pointer('pointerdown', { button: 0, buttons: 1 }));
+    expect(fake.drag).toEqual(['start']);
+
+    vi.advanceTimersByTime(DRAG_MAX_MS - 1);
+    expect(fake.drag).toEqual(['start']);
+
+    vi.advanceTimersByTime(1);
+    expect(fake.drag).toEqual(['start', 'end']);
   });
 
   it('el modo dev de zonas se enciende solo con ?zones=1', () => {

@@ -23,6 +23,16 @@ const BUBBLE_VISIBLE_MS = 4000;
 const BUBBLE_FADE_MS = 420;
 
 /**
+ * Tope de seguridad del arrastre.
+ *
+ * Si el sistema pierde el `pointerup` (Alt+Tab a media pulsación, un diálogo
+ * que roba el foco, el cursor fuera de la ventana), el arrastre no puede
+ * quedarse pegado al ratón indefinidamente. Treinta segundos cubren de sobra un
+ * gesto real; más allá, algo se rompió.
+ */
+const DRAG_MAX_MS = 30_000;
+
+/**
  * Orquesta todo el bucle de interacción.
  *
  * La fase 1 solo demuestra la columna vertebral: atajo -> máquina de estados ->
@@ -43,6 +53,13 @@ export class App {
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
   /** Timer del desvanecido en curso, para poder cancelarlo si el usuario cierra antes. */
   private fadeTimer: ReturnType<typeof setTimeout> | undefined;
+  /**
+   * Elemento que capturó el puntero durante un arrastre. `null` significa que
+   * no hay gesto en curso, y es la única fuente de verdad: todos los caminos de
+   * fin pasan por `stopDrag()`, que es idempotente.
+   */
+  private dragTarget: HTMLElement | null = null;
+  private dragTimer: ReturnType<typeof setTimeout> | undefined;
   private interactive = false;
   /** Evita que una segunda pulsación del atajo pise una interacción en curso. */
   private busy = false;
@@ -86,6 +103,9 @@ export class App {
     this.destroyRef.onDestroy(() => {
       stopHotkey();
       stopFailure();
+      // Un arrastre abierto al destruir el componente dejaría el estado del
+      // proceso main a medias y la posición sin guardar.
+      this.stopDrag();
       this.timers.forEach((timer) => clearTimeout(timer));
       this.timers.clear();
     });
@@ -106,6 +126,66 @@ export class App {
       this.interactive = interactive;
       this.milo.setInteractive(interactive);
     }
+  }
+
+  /**
+   * Empieza a arrastrar la ventana por IPC.
+   *
+   * `setPointerCapture` es la pieza que hace robusto el gesto: sin captura, el
+   * primer `pointermove` que cae fuera de la ventana (arrastrando rápido) se
+   * pierde y la ventana se queda atrás. Con captura, el elemento sigue
+   * recibiendo eventos aunque el cursor salga de sus límites.
+   */
+  protected startDrag(event: PointerEvent): void {
+    if (event.button !== 0 || this.dragTarget) return;
+
+    const target = event.currentTarget as HTMLElement;
+    target.setPointerCapture(event.pointerId);
+
+    this.dragTarget = target;
+    this.milo.startDrag();
+    this.dragTimer = this.after(DRAG_MAX_MS, () => this.stopDrag());
+  }
+
+  /**
+   * Un paso del arrastre. No manda coordenadas a propósito: el proceso main
+   * relee el cursor de pantalla, porque `clientX` es relativo a la ventana que
+   * se está moviendo y se realimenta.
+   */
+  protected dragStep(event: PointerEvent): void {
+    if (!this.dragTarget) return;
+
+    // Sin botón pulsado, el `pointerup` se perdió. Es la red más barata: el
+    // siguiente movimiento ya lo delata, sin esperar al tope de tiempo.
+    if (event.buttons === 0) {
+      this.stopDrag();
+      return;
+    }
+
+    this.milo.moveDrag();
+  }
+
+  /**
+   * Fin del arrastre. Es idempotente porque lo llaman cinco caminos:
+   * `pointerup`, `pointercancel`, `lostpointercapture`, `blur` y el tope de
+   * tiempo.
+   */
+  protected stopDrag(): void {
+    if (!this.dragTarget) return;
+
+    this.dragTarget = null;
+    this.cancelDragTimer();
+    this.milo.endDrag();
+  }
+
+  /**
+   * Alt+Tab, un diálogo del sistema o el foco que se va a otra ventana: el
+   * `pointerup` no siempre llega, así que perder el foco también cierra el
+   * arrastre.
+   */
+  @HostListener('window:blur')
+  protected onWindowBlur(): void {
+    this.stopDrag();
   }
 
   private runInteractionLoop(): void {
@@ -174,6 +254,13 @@ export class App {
     clearTimeout(this.fadeTimer);
     this.timers.delete(this.fadeTimer);
     this.fadeTimer = undefined;
+  }
+
+  private cancelDragTimer(): void {
+    if (this.dragTimer === undefined) return;
+    clearTimeout(this.dragTimer);
+    this.timers.delete(this.dragTimer);
+    this.dragTimer = undefined;
   }
 
   private reportHotkeyFailure(failure: HotkeyRegistration): void {

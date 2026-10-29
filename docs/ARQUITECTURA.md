@@ -108,53 +108,59 @@ diseño es **pulsar una vez para empezar** y que pare solo, mediante detección 
 silencio (VAD) en la fase 2. Si intentas implementar push-to-talk clásico,
 terminarás metiendo un hook de teclado nativo y builds frágiles.
 
-**6. Arrastrar con la región nativa y guardar solo al soltar.**
-`.hotspot__grip` usa `app-region: drag`, que resuelve el sistema operativo: no hay
-handler de `mousedown` ni canal IPC nuevo. La contrapartida es que una región de
-arrastre **ignora todos los eventos de puntero**, y de ahí el anillo exterior de
-14 px que mantiene vivo el `mousemove` que desbloquea los clics. Con 8 px el
-anillo se cruzaba con el ratón quieto, pero al entrar rápido el cursor aterrizaba
-ya dentro del agarre mientras la ventana seguía click-through: el `mousedown` se
-iba al escritorio y el arrastre no arrancaba. La franja no arrastra; pulsar en
-ella solo desbloquea. Es el techo de la región nativa, no un desajuste.
+**6. Arrastrar por IPC y guardar solo al soltar.**
+`app-region: drag` ya no existe en el proyecto. El renderer avisa de que el gesto
+empieza, avanza y termina (`dragStart`, `dragMove`, `dragEnd`) y **no manda
+coordenadas**: el proceso main lee `screen.getCursorScreenPoint()` y coloca la
+ventana con el delta del cursor desde el origen del arrastre. Así el desfase
+entre donde pulsaste y la esquina de la ventana se conserva solo, sin restarlo a
+mano ni acumular redondeos.
 
-Esa misma contrapartida obliga a que el agarre **no cubra la cara**. Los ojos
-necesitan el `mousemove` para saber dónde está el cursor; con el agarre encima,
-Milo solo reaccionaba desde el borde de la ventana, que es donde nadie pone el
-ratón para mirarlo. El agarre ocupa el torso, por debajo de la línea de los ojos:
-se arrastra desde la barriga y la cara queda viva.
+El motivo del cambio fue la contrapartida de la región nativa: **ignora todos los
+eventos de puntero**, así que obligaba a dejar un anillo muerto de 14 px alrededor
+del agarre. Ese anillo era el que mantenía vivo el `mousemove` que desbloquea los
+clics, y por eso pulsar justo en él no movía nada: el cursor prometía `grab` y el
+gesto no respondía. Con el arrastre por IPC todo `.hotspot` arrastra y la franja
+desaparece. El precio es real y hay que pagarlo: ahora el movimiento es código
+nuestro y hay que reimplementar lo que el sistema operativo daba gratis.
 
-**Alternativa aparcada, no descartada.** Con la ventana funcionando se decidió no
-pagar el cambio, pero si algún día molesta la franja muerta o se quiere arrastrar
-desde cualquier punto, el camino es abandonar la región nativa y mover la ventana
-por IPC con `screen.getCursorScreenPoint()`. Tres trampas que el sistema operativo
-resolvía gratis y habría que reimplementar: las coordenadas deben ser de pantalla
-(`clientX` es relativo a una ventana que se está moviendo, así que se realimenta y
-tiembla); con escalado de Windows distinto del 100 % hay que aplicar el
-`scaleFactor` del display, porque `setPosition` trabaja en píxeles físicos; y un
-`pointerup` perdido —cursor fuera de la ventana, `Alt+Tab` a media pulsación— deja
-el arrastre pegado, así que pide captura de puntero, `blur` y un tiempo máximo.
+Las tres trampas, y cómo quedan resueltas:
+
+- **Coordenadas.** `clientX` es relativo a una ventana que se está moviendo, así
+  que usarlo realimenta el movimiento y tiembla. El renderer no manda posición:
+  el main lee el cursor de pantalla.
+- **Escalado.** La nota anterior decía que había que aplicar el `scaleFactor` del
+  monitor porque `setPosition` trabajaba en píxeles físicos. Al leer el cursor en
+  el main, la conversión sobra: `getCursorScreenPoint()` devuelve DIP por
+  contrato y `getBounds()`/`setPosition()` hablan la misma unidad. La trampa
+  vuelve el día que alguien mande coordenadas desde el renderer.
+- **`pointerup` perdido.** Cursor fuera de la ventana, `Alt+Tab` a media
+  pulsación o un diálogo que roba el foco dejan el gesto sin final. Se cierra por
+  cuatro caminos: captura de puntero, un `pointermove` con `buttons === 0`,
+  `window:blur` y un tope de 30 s. Todos pasan por `stopDrag()`, que es
+  idempotente.
+
+La posición se guarda en `config.json` al terminar el arrastre, no desde `moved`:
+como el movimiento ahora lo provoca `setPosition` en cada paso, `moved` puede
+dispararse decenas de veces por segundo y escribir el disco a ese ritmo es
+justo lo que se quería evitar. `endWindowDrag()` sabe exactamente cuándo se
+suelta, así que guarda una sola vez.
 
 La regla para decidir no es "IPC sí o no", sino dónde está la frontera: el
 renderer dibuja y el main toca el sistema. Se cruza para lo que el renderer no
 puede hacer —mover la ventana, atajos globales, posición del cursor en pantalla—,
-no para centralizar lógica que ya vive bien en el renderer.
+no para centralizar lógica que ya vive bien en el renderer. Por eso el canal
+lleva intención y no geometría.
 
-La caja interactiva (`.hotspot`) debe medir **lo mismo que el agarre más el
-anillo** (hoy 115×71 px, con el agarre inscrito a 14 px), porque es la que pinta
-`cursor: grab`. Cuando medía el cuerpo entero
-llegaba hasta la frente, el cursor prometía arrastre sobre el pecho y el gesto no
-respondía sin lanzar ningún error. Un desajuste entre las dos cajas no rompe
-nada visible: solo hace que Milo "no se deje mover". Para verificarlo sin
-adivinar, `npm run dev:zones` colorea los dos elementos reales, dibuja los
-radios de la mirada y marca el borde de la ventana con su tamaño; el overlay no
-copia geometría, así que no puede mentir, con
-una excepción: el relleno rojo se pinta con `border-radius`, que la región nativa
-ignora, así que el rectángulo que de verdad arrastra es la caja del agarre y no
-la elipse.
+La caja interactiva (`.hotspot`) mide 115×71 px y es también la superficie de
+arrastre, así que lo que pinta `cursor: grab` es exactamente lo que responde. No
+puede llegar hasta la frente: ahí están los ojos, y si el hotspot los cubriera la
+ventana dejaría de ser click-through sobre la cara y un clic en ella dejaría de
+llegar a la aplicación de detrás. Se arrastra desde la barriga y la cara queda
+viva. Para verificarlo sin adivinar, `npm run dev:zones` colorea el hotspot real,
+dibuja los radios de la mirada y marca el borde de la ventana con su tamaño; el
+overlay no copia geometría, así que no puede mentir.
 
-La posición se guarda en `config.json` desde `moved`, que se emite una vez al
-soltar (guardar en cada `move` escribiría el disco decenas de veces por segundo).
 Se descartó `windowStatePersistence` de Electron 45: está marcada como
 experimental y no cubre el caso que duele, que es desconectar el monitor donde
 estaba Milo. Con `skipTaskbar: true`, una ventana fuera de pantalla no se puede
@@ -208,7 +214,7 @@ más lento y bajarla lo acerca a un tic.
 | Milo "piensa"        | Otro `setTimeout(900)`. No hay LLM.                            |
 | Milo "responde"      | Texto fijo en el código.                                       |
 | Ajustes persistentes | Sí es real: `config.json` en `userData`.                       |
-| Milo se arrastra     | Sí es real: lo mueve el sistema operativo, no JS.              |
+| Milo se arrastra     | Sí es real: el renderer avisa y el main mueve la ventana.      |
 | Milo recuerda dónde  | Sí es real: `position` en `config.json`, validada al arrancar. |
 
 ## Cómo verificar que sigue vivo
@@ -231,8 +237,7 @@ npm run dev:web      # solo Chrome, para pulir el personaje
 | Cambiar el atajo por defecto              | `src/shared/ipc.ts` (`DEFAULT_HOTKEY`)                    |
 | Añadir una operación privilegiada         | `src/shared/ipc.ts` → `preload.ts` → handler en `main.ts` |
 | Mover o redimensionar la ventana          | `electron/window.ts`                                      |
-| Cambiar el tamaño del área cliqueable     | `.hotspot` en `src/app/app.scss`                          |
-| Cambiar el agarre para arrastrar          | `.hotspot__grip` en `src/app/app.scss`                    |
+| Cambiar el área cliqueable y de arrastre  | `.hotspot` en `src/app/app.scss`                          |
 | Cuándo se descarta una posición guardada  | `MIN_VISIBLE` en `electron/window.ts`                     |
 | Cambiar el estilo de la burbuja           | `features/bubble/bubble.scss`                             |
 | Cuánto dura el mensaje en pantalla        | `BUBBLE_VISIBLE_MS` en `src/app/app.ts`                   |

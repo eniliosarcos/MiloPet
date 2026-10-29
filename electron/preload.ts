@@ -27,6 +27,9 @@ const CH = {
   setInteractive: 'milo:set-interactive',
   getConfig: 'milo:get-config',
   setHotkey: 'milo:set-hotkey',
+  dragStart: 'milo:drag-start',
+  dragMove: 'milo:drag-move',
+  dragEnd: 'milo:drag-end',
   state: 'milo:state',
   quit: 'milo:quit',
 } as const satisfies { [K in keyof typeof CHANNELS]: (typeof CHANNELS)[K] };
@@ -54,6 +57,10 @@ const bridge: MiloBridge = {
 
   setHotkey: (accelerator) =>
     ipcRenderer.invoke(CH.setHotkey, accelerator) as Promise<HotkeyRegistration>,
+
+  startDrag: () => ipcRenderer.send(CH.dragStart),
+  moveDrag: () => ipcRenderer.send(CH.dragMove),
+  endDrag: () => ipcRenderer.send(CH.dragEnd),
 
   setState: (state: MascotState) => ipcRenderer.send(CH.state, state),
 
