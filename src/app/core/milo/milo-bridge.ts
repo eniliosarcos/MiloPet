@@ -68,6 +68,26 @@ function createBrowserBridge(): MiloBridge {
     setState() {
       // No hay proceso main al que informar.
     },
+    async transcribe() {
+      // Sin proceso main no hay proveedor ni clave: el navegador sirve para
+      // pulir el personaje, no para hablarle.
+      return { ok: false, failure: 'no-key' };
+    },
+    async getSttStatus() {
+      return { configured: false, provider: null };
+    },
+    async setSttKey() {
+      // La clave viaja cifrada por el proceso main; aquí no hay dónde guardarla.
+      return { ok: false, failure: 'unknown' };
+    },
+    async clearSttKey() {
+      return { configured: false, provider: null };
+    },
+    openSettings() {
+      // En el navegador la pantalla de ajustes es la misma página con otra
+      // query, así que basta con recargar: útil para maquetarla.
+      window.location.assign('?settings=1');
+    },
     quit() {
       // No hay app que cerrar.
     },

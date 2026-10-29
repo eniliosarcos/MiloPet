@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 
-import type { MiloBridge } from '../shared/ipc';
+import type { MiloBridge, SttFailure, TranscribeResult } from '../shared/ipc';
 import { App } from './app';
 import { VOICE, type CaptureResult, type VoiceCapture } from './core/audio/capture';
 import { MILO } from './core/milo/milo-bridge';
@@ -10,13 +10,16 @@ import { MILO } from './core/milo/milo-bridge';
  * Sustituto mínimo del puente de Electron, para poder probar la máquina de
  * estados sin abrir una ventana real.
  *
- * `onHotkey` guarda el handler y lo expone como `pressHotkey`, así el test puede
- * simular la pulsación del atajo global desde dentro.
+ * La transcripción es una promesa que el test resuelve a mano: así se puede
+ * comprobar que `thinking` dura lo que dura el proveedor y no un temporizador.
  */
 function createFakeBridge() {
   let press: (() => void) | null = null;
   /** Pasos del arrastre en orden: `start`, `move`, `end`. */
   const drag: string[] = [];
+  let settingsOpened = 0;
+  /** Transcripción pendiente: la resuelve el test con `respond` o `reject`. */
+  let answer: ((result: TranscribeResult) => void) | null = null;
 
   const bridge: MiloBridge = {
     onHotkey(handler) {
@@ -49,12 +52,49 @@ function createFakeBridge() {
     setState() {
       /* sin efecto */
     },
+    transcribe() {
+      return new Promise<TranscribeResult>((resolve) => {
+        answer = resolve;
+      });
+    },
+    async getSttStatus() {
+      return { configured: true, provider: 'groq' };
+    },
+    async setSttKey() {
+      return { ok: true, status: { configured: true, provider: 'groq' } };
+    },
+    async clearSttKey() {
+      return { configured: false, provider: null };
+    },
+    openSettings() {
+      settingsOpened += 1;
+    },
     quit() {
       /* sin efecto */
     },
   };
 
-  return { bridge, drag, pressHotkey: () => press?.() };
+  return {
+    bridge,
+    drag,
+    pressHotkey: () => press?.(),
+    get settingsOpened() {
+      return settingsOpened;
+    },
+    get transcribing() {
+      return answer !== null;
+    },
+    respond(text: string) {
+      const resolve = answer;
+      answer = null;
+      resolve?.({ ok: true, text });
+    },
+    reject(failure: SttFailure) {
+      const resolve = answer;
+      answer = null;
+      resolve?.({ ok: false, failure });
+    },
+  };
 }
 
 /**
@@ -68,6 +108,14 @@ function createFakeVoice() {
   let settle: ((result: CaptureResult) => void) | null = null;
   let reject: ((error: Error) => void) | null = null;
   let listening = false;
+
+  /** Muestras de relleno: el VAD no se prueba aquí, solo el cableado. */
+  const clip = (heardSpeech: boolean, durationMs: number): CaptureResult => ({
+    heardSpeech,
+    durationMs,
+    pcm: new Float32Array(16),
+    sampleRate: 48_000,
+  });
 
   const capture: VoiceCapture = {
     listen() {
@@ -100,10 +148,10 @@ function createFakeVoice() {
       return listening;
     },
     heard(durationMs = 1200) {
-      settle?.({ heardSpeech: true, durationMs });
+      settle?.(clip(true, durationMs));
     },
     silent() {
-      settle?.({ heardSpeech: false, durationMs: 6000 });
+      settle?.(clip(false, 6000));
     },
     broken(message = 'No tengo permiso para usar el micrófono.') {
       reject?.(new Error(message));
@@ -114,9 +162,9 @@ function createFakeVoice() {
 /**
  * Deja correr las microtareas.
  *
- * El bucle espera a la captura antes de pasar a `thinking`; el resultado de esa
- * promesa no llega en el mismo tick en que el test la resuelve. `advanceTimers`
- * no toca las microtareas, así que hacen falta dos vueltas.
+ * Cada `await` del bucle (captura, transcripción) necesita su vuelta. Dos
+ * bastan para el camino más largo: la captura resuelve y, con ella, la
+ * transcripción arranca.
  */
 async function flush(): Promise<void> {
   await Promise.resolve();
@@ -151,9 +199,8 @@ function pointer(type: string, init: MouseEventInit = {}, pointerId = 1): MouseE
  * Tiempos del bucle, repetidos aquí a propósito: si cambian en
  * `core/interaction/interaction.ts`, el test falla.
  *
- * `listening` ya no está: su duración la decide el VAD, no una constante.
+ * `thinking` ya no está: su duración la decide el proveedor de voz.
  */
-const THINKING_MS = 900;
 const ACTING_MS = 3200;
 const BUBBLE_VISIBLE_MS = 4000;
 const BUBBLE_FADE_MS = 420;
@@ -229,8 +276,7 @@ describe('App', () => {
     expect(stateOf(fixture)).toBe('thinking');
   });
 
-  it('muestra el mensaje al actuar y lo desvanece solo', async () => {
-    vi.useFakeTimers();
+  it('piensa mientras el proveedor transcribe, no un tiempo fijo', async () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
 
@@ -240,10 +286,34 @@ describe('App', () => {
     await flush();
     fixture.detectChanges();
 
-    vi.advanceTimersByTime(THINKING_MS);
+    // La transcripción está en vuelo: nadie la ha resuelto todavía.
+    expect(stateOf(fixture)).toBe('thinking');
+    expect(fake.transcribing).toBe(true);
+
+    fake.respond('Hola Milo');
+    await flush();
     fixture.detectChanges();
+
     expect(stateOf(fixture)).toBe('acting');
-    expect(findBubble(fixture)?.textContent?.trim()).toContain('todavía no entiendo palabras');
+    expect(findBubble(fixture)?.textContent?.trim()).toBe('Hola Milo');
+  });
+
+  it('muestra lo transcrito y lo desvanece solo', async () => {
+    vi.useFakeTimers();
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    fake.pressHotkey();
+    fixture.detectChanges();
+    voice.heard();
+    await flush();
+    fixture.detectChanges();
+    fake.respond('Ponme música');
+    await flush();
+    fixture.detectChanges();
+
+    expect(stateOf(fixture)).toBe('acting');
+    expect(findBubble(fixture)?.textContent?.trim()).toBe('Ponme música');
 
     // Vuelve a idle y arranca la cuenta de lectura.
     vi.advanceTimersByTime(ACTING_MS);
@@ -288,6 +358,24 @@ describe('App', () => {
     expect(stateOf(fixture)).toBe('listening');
   });
 
+  it('no responde si el proveedor devuelve texto vacío', async () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    fake.pressHotkey();
+    fixture.detectChanges();
+    voice.heard();
+    await flush();
+    fixture.detectChanges();
+    fake.respond('   ');
+    await flush();
+    fixture.detectChanges();
+
+    // Ruido que pasó el VAD pero no es una frase: no hay nada que decir.
+    expect(stateOf(fixture)).toBe('idle');
+    expect(findBubble(fixture)).toBeNull();
+  });
+
   it('cuenta el fallo del micrófono y aparta el mensaje solo', async () => {
     vi.useFakeTimers();
     const fixture = TestBed.createComponent(App);
@@ -313,6 +401,33 @@ describe('App', () => {
     vi.advanceTimersByTime(BUBBLE_VISIBLE_MS + BUBBLE_FADE_MS);
     fixture.detectChanges();
     expect(findBubble(fixture)).toBeNull();
+  });
+
+  it('explica que falta la clave en vez de quedarse callado', async () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    fake.pressHotkey();
+    fixture.detectChanges();
+    voice.heard();
+    await flush();
+    fixture.detectChanges();
+    fake.reject('no-key');
+    await flush();
+    fixture.detectChanges();
+
+    expect(stateOf(fixture)).toBe('error');
+    expect(findBubble(fixture)?.textContent?.trim()).toContain('clave');
+  });
+
+  it('el clic derecho sobre Milo abre los ajustes', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    const hotspot = fixture.nativeElement.querySelector('.hotspot') as HTMLElement;
+    hotspot.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+
+    expect(fake.settingsOpened).toBe(1);
   });
 
   it('una segunda pulsación mientras escucha no abre otra captura', async () => {
@@ -344,8 +459,8 @@ describe('App', () => {
     voice.heard();
     await flush();
     fixture.detectChanges();
-
-    vi.advanceTimersByTime(THINKING_MS);
+    fake.respond('Ponme música');
+    await flush();
     fixture.detectChanges();
 
     const close = fixture.nativeElement.querySelector('.bubble__close') as HTMLButtonElement;
@@ -371,8 +486,8 @@ describe('App', () => {
     voice.heard();
     await flush();
     fixture.detectChanges();
-
-    vi.advanceTimersByTime(THINKING_MS);
+    fake.respond('Ponme música');
+    await flush();
     fixture.detectChanges();
 
     // `app.ts` desbloquea los clics de la ventana solo donde `elementFromPoint`
@@ -393,8 +508,11 @@ describe('App', () => {
     voice.heard();
     await flush();
     fixture.detectChanges();
+    fake.respond('Primera respuesta');
+    await flush();
+    fixture.detectChanges();
 
-    vi.advanceTimersByTime(THINKING_MS + ACTING_MS);
+    vi.advanceTimersByTime(ACTING_MS);
     fixture.detectChanges();
 
     const close = fixture.nativeElement.querySelector('.bubble__close') as HTMLButtonElement;
@@ -411,9 +529,11 @@ describe('App', () => {
     voice.heard();
     await flush();
     fixture.detectChanges();
-    vi.advanceTimersByTime(THINKING_MS);
+    fake.respond('Segunda respuesta');
+    await flush();
     fixture.detectChanges();
-    expect(findBubble(fixture)?.textContent?.trim()).toContain('todavía no entiendo palabras');
+
+    expect(findBubble(fixture)?.textContent?.trim()).toBe('Segunda respuesta');
   });
 
   it('arrastra la ventana por IPC: pointerdown, pasos y pointerup', () => {

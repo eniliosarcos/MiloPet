@@ -1,8 +1,18 @@
 import { app, ipcMain, Menu } from 'electron';
 
-import { CHANNELS, type MascotState } from '../src/shared/ipc';
+import {
+  CHANNELS,
+  type MascotState,
+  type SetKeyResult,
+  type SpeechClip,
+  type SttStatus,
+  type TranscribeResult,
+} from '../src/shared/ipc';
 import { readConfig, writeConfig } from './config';
 import { disposeHotkeys, registerHotkey } from './hotkey';
+import { canStoreSecrets, clearSecret, readSecret, writeSecret } from './secrets';
+import { openSettingsWindow } from './settings';
+import { GroqTranscriber, TranscriberError } from './stt/transcriber';
 import {
   createMascotWindow,
   endWindowDrag,
@@ -14,6 +24,23 @@ import {
 
 /** Último estado informado por el renderer. Lo usará la capa de bandeja y logs. */
 let lastState: MascotState = 'idle';
+
+/**
+ * Nombre con el que se guarda la clave del proveedor de voz.
+ *
+ * Un nombre por proveedor y no uno genérico: el día que haya dos, cada clave
+ * vive en su archivo y cambiar de proveedor no pisa la anterior.
+ */
+const STT_SECRET = 'groq';
+
+/** Una instancia basta: no guarda estado entre peticiones. */
+const transcriber = new GroqTranscriber();
+
+/** Estado de la clave, sin revelarla nunca. */
+async function sttStatus(): Promise<SttStatus> {
+  const configured = (await readSecret(STT_SECRET)) !== null;
+  return { configured, provider: configured ? transcriber.provider : null };
+}
 
 // Un compañero de escritorio debe ser una sola instancia: dos Milos peleando
 // por el mismo atajo global garantizan el bug "a veces funciona".
@@ -64,6 +91,66 @@ function registerIpc(): void {
       console.debug('[milo] estado:', lastState);
     }
   });
+
+  ipcMain.handle(CHANNELS.getSttStatus, () => sttStatus());
+
+  ipcMain.handle(CHANNELS.setSttKey, async (_event, key: unknown): Promise<SetKeyResult> => {
+    const clean = typeof key === 'string' ? key.trim() : '';
+    if (!clean) return { ok: false, failure: 'auth' };
+
+    // Sin cifrado disponible no se guarda nada: un archivo en claro es peor que
+    // pedir la clave otra vez.
+    if (!(await canStoreSecrets())) return { ok: false, failure: 'unknown' };
+
+    // Se valida antes de guardar: si no, el usuario descubre que la clave está
+    // mal a la tercera frase, cuando ya no se acuerda de lo que escribió.
+    try {
+      await transcriber.verifyKey(clean);
+    } catch (error) {
+      return {
+        ok: false,
+        failure: error instanceof TranscriberError ? error.failure : 'unknown',
+      };
+    }
+
+    try {
+      await writeSecret(STT_SECRET, clean);
+    } catch {
+      return { ok: false, failure: 'unknown' };
+    }
+
+    return { ok: true, status: await sttStatus() };
+  });
+
+  ipcMain.handle(CHANNELS.clearSttKey, async () => {
+    clearSecret(STT_SECRET);
+    return sttStatus();
+  });
+
+  ipcMain.handle(
+    CHANNELS.transcribe,
+    async (_event, clip: SpeechClip): Promise<TranscribeResult> => {
+      const apiKey = await readSecret(STT_SECRET);
+      if (!apiKey) return { ok: false, failure: 'no-key' };
+
+      // El payload viene del renderer: se comprueba que sea lo que dice ser
+      // antes de empaquetarlo. Un `Float32Array` vacío produce un WAV inválido.
+      if (!(clip?.pcm instanceof Float32Array) || clip.pcm.length === 0) {
+        return { ok: false, failure: 'audio' };
+      }
+
+      try {
+        return { ok: true, text: await transcriber.transcribe(clip, apiKey) };
+      } catch (error) {
+        return {
+          ok: false,
+          failure: error instanceof TranscriberError ? error.failure : 'unknown',
+        };
+      }
+    },
+  );
+
+  ipcMain.on(CHANNELS.openSettings, () => openSettingsWindow());
 
   ipcMain.on(CHANNELS.quit, () => app.quit());
 }

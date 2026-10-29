@@ -186,6 +186,20 @@ export class App {
     this.interaction.closeBubble();
   }
 
+  /**
+   * Clic derecho sobre Milo: ajustes.
+   *
+   * Es la única entrada permanente a la configuración mientras no haya icono de
+   * bandeja, y la que anuncia la burbuja cuando falta la clave. Se ignora si hay
+   * un arrastre en curso para no abrir una ventana a mitad de gesto.
+   */
+  protected openSettings(event: MouseEvent): void {
+    event.preventDefault();
+    if (this.dragTarget) return;
+
+    this.milo.openSettings();
+  }
+
   private cancelDragTimer(): void {
     if (this.dragTimer === undefined) return;
 

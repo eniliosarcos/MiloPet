@@ -19,6 +19,10 @@ import type {
   MascotState,
   MiloBridge,
   MiloConfig,
+  SetKeyResult,
+  SpeechClip,
+  SttStatus,
+  TranscribeResult,
 } from '../src/shared/ipc';
 
 const CH = {
@@ -31,6 +35,11 @@ const CH = {
   dragMove: 'milo:drag-move',
   dragEnd: 'milo:drag-end',
   state: 'milo:state',
+  transcribe: 'milo:transcribe',
+  getSttStatus: 'milo:stt-status',
+  setSttKey: 'milo:set-stt-key',
+  clearSttKey: 'milo:clear-stt-key',
+  openSettings: 'milo:open-settings',
   quit: 'milo:quit',
 } as const satisfies { [K in keyof typeof CHANNELS]: (typeof CHANNELS)[K] };
 
@@ -63,6 +72,17 @@ const bridge: MiloBridge = {
   endDrag: () => ipcRenderer.send(CH.dragEnd),
 
   setState: (state: MascotState) => ipcRenderer.send(CH.state, state),
+
+  transcribe: (clip: SpeechClip) =>
+    ipcRenderer.invoke(CH.transcribe, clip) as Promise<TranscribeResult>,
+
+  getSttStatus: () => ipcRenderer.invoke(CH.getSttStatus) as Promise<SttStatus>,
+
+  setSttKey: (key: string) => ipcRenderer.invoke(CH.setSttKey, key) as Promise<SetKeyResult>,
+
+  clearSttKey: () => ipcRenderer.invoke(CH.clearSttKey) as Promise<SttStatus>,
+
+  openSettings: () => ipcRenderer.send(CH.openSettings),
 
   quit: () => ipcRenderer.send(CH.quit),
 };

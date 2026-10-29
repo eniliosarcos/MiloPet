@@ -1,0 +1,133 @@
+// La ventana de ajustes es opaca y con marco: aquí se lee y se escribe, no se
+// dibuja un personaje. Se reutiliza la paleta oscura de la burbuja para que las
+// dos ventanas parezcan de la misma app.
+
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #0b0f14;
+  color: #e2e8f0;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+}
+
+.settings__title {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.settings__lead,
+.settings__hint,
+.settings__footer {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+.settings__subtitle {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #cbd5e1;
+}
+
+.settings__hint a {
+  color: #7dd3fc;
+}
+
+.settings__block {
+  padding: 16px;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  background: #111827;
+}
+
+.settings__label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.settings__row {
+  display: flex;
+  gap: 8px;
+}
+
+.settings__input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #0b1220;
+  color: #e2e8f0;
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: 13px;
+}
+
+.settings__input:focus {
+  border-color: #38bdf8;
+  outline: none;
+}
+
+.settings__button {
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #38bdf8;
+  color: #082f49;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.settings__button:disabled {
+  background: #1e293b;
+  color: #64748b;
+  cursor: default;
+}
+
+.settings__quiet {
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #94a3b8;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.settings__note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.settings__note[data-tone='ok'] {
+  color: #86efac;
+}
+
+.settings__note[data-tone='error'] {
+  color: #fca5a5;
+}
+
+.settings__footer {
+  font-size: 11px;
+}

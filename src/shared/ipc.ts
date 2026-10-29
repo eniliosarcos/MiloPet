@@ -26,6 +26,16 @@ export const CHANNELS = {
   dragEnd: 'milo:drag-end',
   /** renderer -> main: informa el estado actual (se usa para trazas y logs). */
   state: 'milo:state',
+  /** renderer -> main: transcribe el audio de una frase (respuesta asíncrona). */
+  transcribe: 'milo:transcribe',
+  /** renderer -> main: ¿hay clave de voz guardada? */
+  getSttStatus: 'milo:stt-status',
+  /** renderer -> main: valida y guarda la clave del proveedor de voz. */
+  setSttKey: 'milo:set-stt-key',
+  /** renderer -> main: borra la clave guardada. */
+  clearSttKey: 'milo:clear-stt-key',
+  /** renderer -> main: abre la ventana de ajustes. */
+  openSettings: 'milo:open-settings',
   /** renderer -> main: cierra la aplicación. */
   quit: 'milo:quit',
 } as const;
@@ -53,6 +63,47 @@ export interface HotkeyRegistration {
   accelerator: string;
   reason?: 'already-taken' | 'invalid';
 }
+
+/**
+ * Proveedores de voz a texto.
+ *
+ * Hoy hay uno. La unión existe para que añadir otro no obligue a adivinar de
+ * dónde salió la clave guardada.
+ */
+export type SttProvider = 'groq';
+
+/**
+ * Estado de la clave del proveedor de voz.
+ *
+ * El renderer nunca recibe la clave, solo si está puesta: para la ventana de
+ * ajustes basta con saber si hay que pedirla.
+ */
+export interface SttStatus {
+  configured: boolean;
+  provider: SttProvider | null;
+}
+
+/** Los motivos por los que una transcripción puede fallar, ya clasificados. */
+export type SttFailure = 'no-key' | 'auth' | 'quota' | 'network' | 'audio' | 'unknown';
+
+/**
+ * Audio de una frase listo para transcribir.
+ *
+ * Se manda como muestras y no como archivo a propósito: el contenedor (WAV) lo
+ * decide el proceso main, que es quien habla con el proveedor.
+ */
+export interface SpeechClip {
+  /** Muestras mono normalizadas a -1..1. */
+  pcm: Float32Array;
+  /** Frecuencia real de captura; no se remuestrea. */
+  sampleRate: number;
+}
+
+/** Resultado de una transcripción. El fallo viaja, no se lanza. */
+export type TranscribeResult = { ok: true; text: string } | { ok: false; failure: SttFailure };
+
+/** Resultado de guardar una clave: valida antes de aceptarla. */
+export type SetKeyResult = { ok: true; status: SttStatus } | { ok: false; failure: SttFailure };
 
 /** La superficie que el preload expone al renderer. */
 export interface MiloBridge {
@@ -86,6 +137,28 @@ export interface MiloBridge {
   endDrag(): void;
 
   setState(state: MascotState): void;
+
+  /**
+   * Transcribe el audio de una frase.
+   *
+   * El renderer manda muestras, no un archivo, y el proceso main decide el
+   * contenedor y el proveedor. Un fallo llega como `{ ok: false }` en vez de
+   * como excepción: el bucle necesita distinguir "sin clave" de "sin red" para
+   * poder decírselo al usuario.
+   */
+  transcribe(clip: SpeechClip): Promise<TranscribeResult>;
+
+  /** ¿Hay una clave de voz guardada? Nunca devuelve la clave. */
+  getSttStatus(): Promise<SttStatus>;
+
+  /** Valida la clave contra el proveedor y solo la guarda si responde. */
+  setSttKey(key: string): Promise<SetKeyResult>;
+
+  /** Borra la clave guardada. No toca nada más. */
+  clearSttKey(): Promise<SttStatus>;
+
+  /** Abre (o enfoca) la ventana de ajustes. */
+  openSettings(): void;
 
   quit(): void;
 }

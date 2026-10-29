@@ -36,6 +36,7 @@
     (pointerup)="stopDrag()"
     (pointercancel)="stopDrag()"
     (lostpointercapture)="stopDrag()"
+    (contextmenu)="openSettings($event)"
   ></div>
 
   <app-mascot class="stage__mascot" [state]="state()" [zones]="zones()" />

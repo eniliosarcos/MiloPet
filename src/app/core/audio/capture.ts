@@ -37,11 +37,23 @@ const MAX_SPEECH_MS = 15_000;
 /** Tope sin hablar: pulsaste el atajo y te fuiste. */
 const MAX_WAIT_MS = 6_000;
 
+/**
+ * Tamaño del bloque del procesador de audio: 4096 muestras.
+ *
+ * A 48 kHz son ~85 ms por bloque, suficiente para reconstruir la frase sin
+ * llenar la memoria (15 s son unas 180 entregas).
+ */
+const PROCESSOR_BUFFER = 4096;
+
 export interface CaptureResult {
   /** Si llegó a haber voz. Sin voz no hay nada que transcribir ni que responder. */
   readonly heardSpeech: boolean;
   /** Cuánto duró la captura completa, para trazas y para medir el VAD real. */
   readonly durationMs: number;
+  /** Muestras mono de toda la captura, listas para el proceso main. */
+  readonly pcm: Float32Array;
+  /** Frecuencia real del contexto de audio; el main decide si remuestrea. */
+  readonly sampleRate: number;
 }
 
 /** Lo que el bucle de interacción necesita del micrófono. */
@@ -102,8 +114,28 @@ export class MicrophoneCapture implements VoiceCapture {
 
     const analyser = context.createAnalyser();
     analyser.fftSize = 1024;
-    context.createMediaStreamSource(stream).connect(analyser);
+    const source = context.createMediaStreamSource(stream);
+    source.connect(analyser);
 
+    // El VAD mide con el analizador; el audio se recoge aparte, con el
+    // procesador, porque el analizador no entrega muestras. `ScriptProcessor`
+    // está marcado como obsoleto, pero sigue vivo en Chromium y no exige ni un
+    // archivo extra ni tocar el CSP como un `AudioWorklet`.
+    const processor = context.createScriptProcessor(PROCESSOR_BUFFER, 1, 1);
+    const chunks: Float32Array[] = [];
+    processor.onaudioprocess = (event) => {
+      chunks.push(new Float32Array(event.inputBuffer.getChannelData(0)));
+    };
+    source.connect(processor);
+
+    // Un `ScriptProcessor` sin destino no siempre recibe datos. Se conecta a una
+    // ganancia a cero: el micro no vuelve a los altavoces.
+    const mute = context.createGain();
+    mute.gain.value = 0;
+    processor.connect(mute);
+    mute.connect(context.destination);
+
+    const sampleRate = context.sampleRate;
     const samples = new Uint8Array(analyser.fftSize);
     const calibration: number[] = [];
     const startedAt = performance.now();
@@ -117,6 +149,9 @@ export class MicrophoneCapture implements VoiceCapture {
       const release = (): void => {
         if (timer !== null) clearInterval(timer);
         timer = null;
+        processor.onaudioprocess = null;
+        processor.disconnect();
+        mute.disconnect();
         // Sin `stop()` la pista sigue viva y Windows mantiene el icono de micro
         // encendido: parece que Milo escucha para siempre.
         for (const track of stream.getTracks()) track.stop();
@@ -127,8 +162,16 @@ export class MicrophoneCapture implements VoiceCapture {
       const finish = (heardSpeech: boolean): void => {
         if (done) return;
         done = true;
+        // Las muestras se copian antes de soltar el contexto: después del
+        // `close()` los buffers del procesador ya no son de fiar.
+        const pcm = concat(chunks);
         release();
-        resolve({ heardSpeech, durationMs: Math.round(performance.now() - startedAt) });
+        resolve({
+          heardSpeech,
+          durationMs: Math.round(performance.now() - startedAt),
+          pcm,
+          sampleRate,
+        });
       };
 
       const cancel = (): void => finish(false);
@@ -179,6 +222,25 @@ function rms(analyser: AnalyserNode, samples: Uint8Array<ArrayBuffer>): number {
   }
 
   return Math.sqrt(sum / samples.length);
+}
+
+/**
+ * Une los bloques del procesador en una sola tira de muestras.
+ *
+ * Se copia todo a un `Float32Array` nuevo porque los bloques que entrega el
+ * procesador se reutilizan: guardar referencias daría la última frase repetida.
+ */
+function concat(chunks: readonly Float32Array[]): Float32Array {
+  const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const merged = new Float32Array(total);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  return merged;
 }
 
 /** Traduce el error del navegador a algo que el usuario pueda accionar. */

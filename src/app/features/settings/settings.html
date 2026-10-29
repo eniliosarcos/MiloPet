@@ -1,0 +1,53 @@
+<main class="settings">
+  <header class="settings__header">
+    <h1 class="settings__title">Ajustes de Milo</h1>
+    <p class="settings__lead">Milo oye con Groq. La clave es tuya: no viaja dentro de la app.</p>
+  </header>
+
+  <section class="settings__block">
+    <h2 class="settings__subtitle">Voz a texto</h2>
+
+    <p class="settings__hint">
+      Crea una clave gratuita en
+      <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer">
+        console.groq.com/keys </a
+      >y pégala aquí. Se guarda cifrada en este equipo y no se manda a ningún otro sitio.
+    </p>
+
+    <label class="settings__label" for="stt-key">Clave de Groq</label>
+    <div class="settings__row">
+      <input
+        id="stt-key"
+        class="settings__input"
+        type="password"
+        autocomplete="off"
+        spellcheck="false"
+        [attr.placeholder]="configured ? 'Guardada ···· (pega otra para cambiarla)' : 'gsk_...'"
+        [value]="draft()"
+        (input)="onInput($event)"
+      />
+      <button
+        class="settings__button"
+        type="button"
+        [disabled]="saving() || draft().trim().length === 0"
+        (click)="save()"
+      >
+        {{ saving() ? 'Comprobando…' : 'Guardar' }}
+      </button>
+    </div>
+
+    @if (configured) {
+      <button class="settings__quiet" type="button" [disabled]="saving()" (click)="clear()">
+        Borrar la clave guardada
+      </button>
+    }
+
+    @if (feedback(); as note) {
+      <p class="settings__note" [attr.data-tone]="note.tone" role="status">{{ note.text }}</p>
+    }
+  </section>
+
+  <footer class="settings__footer">
+    El audio de cada frase se manda a Groq para transcribirlo. Nada más sale de este equipo.
+  </footer>
+</main>

@@ -2,6 +2,8 @@ import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 
 import type { HotkeyRegistration, MascotState } from '../../../shared/ipc';
 import { VOICE, type CaptureResult } from '../audio/capture';
+import { MILO } from '../milo/milo-bridge';
+import { bubbleMessage } from '../stt/failure';
 
 /**
  * El bucle de interacción: qué hace Milo desde que pulsas el atajo hasta que se
@@ -28,15 +30,10 @@ const BUBBLE_VISIBLE_MS = 4000;
  */
 const BUBBLE_FADE_MS = 420;
 
-/** Cuánto se queda un error en pantalla antes de apartarse. */
-const ERROR_MS = 4200;
-
 /**
- * SIMULADO: la fase 3 sustituye este tiempo por el cerebro real. Sigue siendo un
- * temporizador a propósito, para que el bucle se sienta completo antes de meter
- * latencia de verdad.
+ * Cuánto se queda un error en pantalla antes de apartarse.
  */
-const THINKING_MS = 900;
+const ERROR_MS = 4200;
 
 /**
  * SIMULADO: la fase 3 sustituye este tiempo por la duración de la respuesta.
@@ -46,6 +43,7 @@ const ACTING_MS = 3200;
 
 @Injectable({ providedIn: 'root' })
 export class Interaction {
+  private readonly milo = inject(MILO);
   private readonly voice = inject(VOICE);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -106,14 +104,41 @@ export class Interaction {
     }
 
     this.state.set('thinking');
-    this.after(THINKING_MS, () => {
-      this.state.set('acting');
-      this.message.set('Ya te oigo, pero todavía no entiendo palabras. Eso es lo siguiente.');
-      this.after(ACTING_MS, () => {
-        this.state.set('idle');
-        this.busy = false;
-        this.scheduleDismiss();
-      });
+
+    // `thinking` ya no es un temporizador: dura lo que tarde el proveedor. A
+    // partir de aquí, la latencia es la del mundo real.
+    const result = await this.milo.transcribe({
+      pcm: capture.pcm,
+      sampleRate: capture.sampleRate,
+    });
+
+    if (!this.alive) {
+      this.busy = false;
+      return;
+    }
+
+    if (!result.ok) {
+      this.busy = false;
+      this.fail(bubbleMessage(result.failure));
+      return;
+    }
+
+    // Silencio con algo de energía, o un modelo que no oyó nada: no hay frase.
+    // El proveedor ya recorta, pero un texto en blanco no debe abrir la boca.
+    const text = result.text.trim();
+    if (!text) {
+      this.state.set('idle');
+      this.busy = false;
+      return;
+    }
+
+    this.state.set('acting');
+    this.message.set(text);
+
+    this.after(ACTING_MS, () => {
+      this.state.set('idle');
+      this.busy = false;
+      this.scheduleDismiss();
     });
   }
 

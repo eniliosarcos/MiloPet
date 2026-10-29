@@ -23,7 +23,10 @@ const ALLOWED_PERMISSIONS = new Set<string>(['media']);
 const MIN_VISIBLE = 80;
 
 /** En desarrollo se carga el dev server de Angular para conservar el hot reload. */
-const DEV_SERVER_URL = 'http://localhost:4200';
+export const DEV_SERVER_URL = 'http://localhost:4200';
+
+/** Build de producción: una sola página, dos ventanas con distinta query. */
+export const RENDERER_INDEX = path.join(__dirname, '../../dist/MiloPet/browser/index.html');
 
 let mascotWindow: BrowserWindow | null = null;
 
@@ -173,7 +176,7 @@ export function createMascotWindow(): BrowserWindow {
     const url = process.env['MILOPET_ZONES'] === '1' ? `${DEV_SERVER_URL}?zones=1` : DEV_SERVER_URL;
     void win.loadURL(url);
   } else {
-    void win.loadFile(path.join(__dirname, '../../dist/MiloPet/browser/index.html'));
+    void win.loadFile(RENDERER_INDEX);
   }
 
   mascotWindow = win;
