@@ -8,6 +8,14 @@ Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 
 ## Historial
 
+### 2026-10-29 — La mirada vuelve al centro despacio · fix
+
+**Qué:** Al perder el cursor, los ojos regresan al centro en 700 ms con una curva suave; mientras lo siguen responden en 160 ms.
+**Por qué:** la vuelta duraba lo mismo que el seguimiento (180 ms) y se sentía mecánica al alejar el ratón.
+**Tocó:** `src/app/features/mascot/mascot.scss`, `gaze.ts` y sus dos tests.
+**Aprendido:** la región `app-region: drag` deja sin `mousemove` la cara de Milo, así que los ojos se congelan al entrar en el hotspot: es el precio de arrastrarlo por la cara. CSS aplica la duración del estado de destino, así que `[data-gaze='true']` basta para tener dos velocidades sin tocar TypeScript.
+**Commits:** `0579f69`
+
 ### 2026-10-29 — La mirada crece al acercar el cursor · fix
 
 **Qué:** La deflexión de los ojos ahora crece con la cercanía del cursor (8,3 px en el borde, 10,6 px encima) y se queda al tope dentro del radio muerto entre los dos ojos.
