@@ -14,7 +14,7 @@ Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 **Por qué:** el usuario quería un gesto anime sentido, con los ojos como única animación.
 **Tocó:** `src/app/features/mascot/mascot.html`, `src/app/features/mascot/mascot.scss`, `docs/RECORRIDO-DEL-CODIGO.md`.
 **Aprendido:** una animación gana a cualquier `transform` declarado por el estado, así que el cambio de forma se hace cruzando dos siluetas por `opacity`; el barrido usa la propiedad individual `translate` para no pisar el parpadeo.
-**Commits:** `PENDIENTE`
+**Commits:** `a3db3fe`
 
 ### 2026-10-29 — Arrastrar a Milo y recordar dónde quedó · feat
 
