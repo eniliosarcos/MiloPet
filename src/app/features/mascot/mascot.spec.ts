@@ -112,15 +112,20 @@ describe('Mascot', () => {
     expect(offset()).toEqual([0, 0]);
   });
 
-  it('da volumen a la pareja: encoge un ojo y crece el otro', () => {
+  it('da volumen a la pareja: estrecha un ojo y ensancha el otro, sin tocar la altura', () => {
     movePointer(EYE_X + 80, EYE_Y);
 
     const left = fixture.nativeElement.querySelector('.mascot__eye--left') as SVGGElement;
     const right = fixture.nativeElement.querySelector('.mascot__eye--right') as SVGGElement;
+    const [rightX, rightY] = right.style.scale.split(' ').map(Number.parseFloat);
+    const [leftX, leftY] = left.style.scale.split(' ').map(Number.parseFloat);
 
     // Mirando a la derecha, el derecho es el que se aleja hacia el cursor.
-    expect(Number.parseFloat(right.style.scale)).toBeLessThan(1);
-    expect(Number.parseFloat(left.style.scale)).toBeGreaterThan(1);
+    expect(rightX).toBeLessThan(1);
+    expect(leftX).toBeGreaterThan(1);
+    // La altura no se toca: si cambiara, el ojo parecería deformado, no girado.
+    expect(rightY).toBe(1);
+    expect(leftY).toBe(1);
   });
 
   it('no sigue un cursor lejano: vuelve al barrido automático', () => {

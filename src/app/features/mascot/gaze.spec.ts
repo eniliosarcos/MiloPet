@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  GAZE_AWAY_GROW,
+  GAZE_AWAY_WIDEN,
   GAZE_DEADZONE,
   GAZE_RANGE,
-  GAZE_TOWARD_SHRINK,
+  GAZE_TOWARD_NARROW,
   eyeScales,
   gazeToward,
 } from './gaze';
@@ -57,17 +57,17 @@ describe('gazeToward', () => {
 });
 
 describe('eyeScales', () => {
-  it('sin mirada, los dos ojos quedan en su tamaño de reposo', () => {
+  it('sin mirada, los dos ojos quedan en su anchura de reposo', () => {
     expect(eyeScales(null)).toEqual({ left: 1, right: 1 });
     expect(eyeScales({ x: 0, y: 0 })).toEqual({ left: 1, right: 1 });
   });
 
-  it('encoge el ojo hacia el que mira y crece el del lado contrario', () => {
+  it('estrecha el ojo hacia el que mira y ensancha el del lado contrario', () => {
     // Mirando a la derecha, el derecho es el que se aleja hacia el cursor.
     const lookRight = eyeScales({ x: 1, y: 0 });
 
-    expect(lookRight.right).toBeCloseTo(1 - GAZE_TOWARD_SHRINK, 10);
-    expect(lookRight.left).toBeCloseTo(1 + GAZE_AWAY_GROW, 10);
+    expect(lookRight.right).toBeCloseTo(1 - GAZE_TOWARD_NARROW, 10);
+    expect(lookRight.left).toBeCloseTo(1 + GAZE_AWAY_WIDEN, 10);
   });
 
   it('es simétrico: izquierda y derecha dan el espejo exacto', () => {
@@ -81,11 +81,11 @@ describe('eyeScales', () => {
   it('cambia de forma proporcional: media mirada, medio efecto', () => {
     const half = eyeScales({ x: 0.5, y: 0 });
 
-    expect(half.right).toBeCloseTo(1 - GAZE_TOWARD_SHRINK / 2, 10);
-    expect(half.left).toBeCloseTo(1 + GAZE_AWAY_GROW / 2, 10);
+    expect(half.right).toBeCloseTo(1 - GAZE_TOWARD_NARROW / 2, 10);
+    expect(half.left).toBeCloseTo(1 + GAZE_AWAY_WIDEN / 2, 10);
   });
 
-  it('no se dispara: el encogimiento está acotado por la constante', () => {
+  it('no se dispara: el estrechamiento está acotado por la constante', () => {
     const extreme = eyeScales({ x: 1, y: 1 });
 
     expect(extreme.right).toBeGreaterThan(0.8);

@@ -53,10 +53,15 @@ export class Mascot {
   });
 
   /**
-   * La pareja gana profundidad: el ojo hacia el que mira encoge y el otro crece
-   * un poco. Es la única nota de volumen que puede dar un dibujo plano.
+   * La pareja gana profundidad: el ojo hacia el que mira se estrecha y el otro
+   * se ensancha. Solo en horizontal y con `toFixed` como `gazeOffset`: el
+   * navegador no necesita más precisión y así el atributo queda legible.
    */
-  protected readonly eyeScale = computed(() => eyeScales(this.gaze()));
+  protected readonly eyeScale = computed(() => {
+    const scale = eyeScales(this.gaze());
+
+    return { left: `${scale.left.toFixed(2)} 1`, right: `${scale.right.toFixed(2)} 1` };
+  });
 
   /**
    * La ventana es click-through, pero `setIgnoreMouseEvents(true, { forward:

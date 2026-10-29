@@ -51,35 +51,37 @@ export const GAZE_MAX = 15;
 export const GAZE_VERTICAL = 0.5;
 
 /**
- * Cuánto encoge el ojo que queda más lejos, en la dirección de la mirada.
+ * Cuánto se estrecha en horizontal el ojo que queda más lejos, en la dirección
+ * de la mirada.
  *
- * Los dos ojos se desplazan lo mismo, pero el que apunta al objetivo lo hace en
- * una cara que gira: se ve más estrecho. Es lo que convierte un desplazamiento
- * plano en la sensación de que Milo vuelve la cara.
+ * No es un escalado: el ojo que se aleja se va de perfil y se ve más angosto,
+ * con la misma altura. Encogerlo entero dejaba dos círculos de distinto tamaño,
+ * que se lee como un ojo mal hecho, no como profundidad.
  */
-export const GAZE_TOWARD_SHRINK = 0.12;
+export const GAZE_TOWARD_NARROW = 0.18;
 
 /**
- * Cuánto crece el ojo del lado contrario, como fracción.
+ * Cuánto se ensancha el ojo del lado contrario, como fracción.
  *
- * Encoger solo uno descuadra la pareja: se lee como un ojo mal dibujado, no como
- * profundidad. Con el otro creciendo un poco, los dos cambios se interpretan
- * juntos como un solo giro.
+ * Estrechar solo uno descuadra la pareja: se lee como un ojo mal dibujado. Con
+ * el otro ensanchándose un poco, los dos cambios se interpretan juntos como un
+ * solo giro.
  */
-export const GAZE_AWAY_GROW = 0.05;
+export const GAZE_AWAY_WIDEN = 0.06;
 
-/** Escala de cada ojo; 1 es su tamaño de reposo. */
+/** Escala horizontal de cada ojo; 1 es su anchura de reposo. */
 export interface EyeScales {
   readonly left: number;
   readonly right: number;
 }
 
 /**
- * Da volumen a la pareja: el ojo hacia el que se mira encoge y el otro crece.
+ * Da volumen a la pareja: el ojo hacia el que se mira se estrecha y el otro se
+ * ensancha, siempre en horizontal.
  *
  * Mirando a la derecha, el derecho es el que se aleja hacia el cursor y el que
- * se reduce. Mirando al centro los dos valen 1: sin giro no hay perspectiva que
- * fingir.
+ * se angosta. Mirando al centro los dos valen 1: sin giro no hay perspectiva
+ * que fingir.
  */
 export function eyeScales(gaze: Gaze | null): EyeScales {
   const x = gaze?.x ?? 0;
@@ -87,8 +89,8 @@ export function eyeScales(gaze: Gaze | null): EyeScales {
   const toTheLeft = Math.max(0, -x);
 
   return {
-    left: 1 + toTheRight * GAZE_AWAY_GROW - toTheLeft * GAZE_TOWARD_SHRINK,
-    right: 1 + toTheLeft * GAZE_AWAY_GROW - toTheRight * GAZE_TOWARD_SHRINK,
+    left: 1 + toTheRight * GAZE_AWAY_WIDEN - toTheLeft * GAZE_TOWARD_NARROW,
+    right: 1 + toTheLeft * GAZE_AWAY_WIDEN - toTheRight * GAZE_TOWARD_NARROW,
   };
 }
 
