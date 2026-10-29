@@ -75,6 +75,28 @@ describe('Mascot', () => {
     expect(y).toBeLessThan(0);
   });
 
+  it('cuanto más cerca el cursor, más se desplazan los ojos', () => {
+    movePointer(EYE_X + 150, EYE_Y);
+    const far = offset()[0];
+
+    movePointer(EYE_X + 40, EYE_Y);
+    const near = offset()[0];
+
+    expect(far).toBeGreaterThan(0);
+    expect(near).toBeGreaterThan(far);
+  });
+
+  it('entre los dos ojos mantiene la última dirección, ya al máximo', () => {
+    movePointer(EYE_X + 80, EYE_Y);
+    const [before] = offset();
+
+    // A 5 px del centro la dirección sería inestable: se conserva la anterior.
+    movePointer(EYE_X + 5, EYE_Y);
+
+    expect(before).toBeGreaterThan(0);
+    expect(offset()[0]).toBe(before);
+  });
+
   it('suelta la mirada cuando el cursor abandona la ventana', () => {
     movePointer(EYE_X + 80, EYE_Y);
     expect(svg().getAttribute('data-gaze')).toBe('true');

@@ -69,7 +69,7 @@ export class Mascot {
     // En el viewBox los ojos están a y=108 de 200, o sea al 54 % del alto.
     const eyeY = rect.top + (rect.height - size) / 2 + size * 0.54;
 
-    this.gaze.set(gazeToward(event.clientX - eyeX, event.clientY - eyeY, size));
+    this.gaze.set(gazeToward(event.clientX - eyeX, event.clientY - eyeY, size, this.gaze()));
   }
 
   /**
