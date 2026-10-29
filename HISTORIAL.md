@@ -8,6 +8,14 @@ Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 
 ## Historial
 
+### 2026-10-29 — Arrastrar a Milo y recordar dónde quedó · feat
+
+**Qué:** El personaje se arrastra a cualquier punto de la pantalla y la posición se guarda al soltar.
+**Por qué:** Milo estaba clavado en la esquina inferior derecha.
+**Tocó:** `electron/window.ts`, `src/shared/ipc.ts`, `src/app/app.scss`, `src/app/app.html`, `src/app/app.spec.ts`, `docs/`.
+**Aprendido:** `app-region: drag` ignora los eventos de puntero; el anillo exterior del hotspot es lo que mantiene vivo el desbloqueo de clics. `SetCursorPos` no pasa por el hook de Electron: para probar el arrastre hay que usar `SendInput`.
+**Commits:** `217abb9..87b69c0`
+
 ### 2026-10-29 — La burbuja se cierra sola y con una (x) · feat
 
 **Qué:** El mensaje vive 4 s tras volver a `idle`, se desvanece en 420 ms y sale del DOM; una (x) lo cierra antes.
