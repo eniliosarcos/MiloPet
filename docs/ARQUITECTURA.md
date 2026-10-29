@@ -185,6 +185,14 @@ cambia el layout y no llega a pintarse** en cuanto el mismo elemento anima
 `getBoundingClientRect()` del ojo daba 30 px y en pantalla se veían 43. Un
 envoltorio sin animaciones se pinta siempre.
 
+Ese grupo escala desde el **borde interno** de cada ojo (`transform-origin: 100%`
+el izquierdo, `0%` el derecho), no desde su centro. Escalando desde el centro, el
+ojo que se aleja se encoge hacia dentro y el hueco entre los dos se abre un 30 %:
+el ojo lejano se lee más lejos de lo que está. Con el borde interno anclado la
+separación es constante y todo el cambio cae en el contorno exterior, que es lo
+que hace un ojo real cuando la cara gira. La contrapartida es que la pareja ya no
+respira hacia el centro: el tamaño se nota en el borde de fuera y no en el hueco.
+
 El desplazamiento es **proporcional** a la distancia al cursor hasta `GAZE_REACH`
 (0,25 del lado) y se satura después. La alternativa era un vector unitario, que
 mantiene la mirada siempre al máximo y solo cambia de dirección: medido a 60 fps,

@@ -89,10 +89,22 @@
 
 // Los 700ms son la vuelta al reposo. Seguir al cursor es otra cosa y la fija la
 // regla de `[data-gaze='true']`, más abajo.
+//
+// El origen es el borde INTERNO del ojo —el que da al otro—, no su centro. Si se
+// escala desde el centro, el ojo que se aleja al mirar de lado se encoge hacia
+// dentro y el hueco entre los dos se abre: la pareja parece separarse y el ojo
+// lejano parece estar más lejos de lo que está. Anclado al borde interno, ese
+// borde no se mueve y todo el cambio cae en el contorno exterior, que es lo que
+// hace un ojo real al girar la cara. La separación queda constante por
+// construcción, sin números que sincronizar con el dibujo.
 .mascot__eye-scaler {
   transform-box: fill-box;
-  transform-origin: center;
+  transform-origin: 100% 50%;
   transition: transform 700ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mascot__eye--right .mascot__eye-scaler {
+  transform-origin: 0% 50%;
 }
 
 // Dos siluetas por ojo, cruzadas por opacidad: óvalo en reposo, párpado caído
