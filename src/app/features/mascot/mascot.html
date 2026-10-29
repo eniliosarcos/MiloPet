@@ -38,7 +38,13 @@
            el óvalo es el reposo, y la forma con el párpado caído hacia dentro
            solo aparece al fallar. El grupo `.mascot__eye` es el que parpadea y
            barre la mirada; `.mascot__eyes` desplaza el conjunto y, cuando el
-           cursor está cerca, lo inclina hacia él (`translate` inline). -->
+           cursor está cerca, lo inclina hacia él (`translate` inline).
+
+           Las dos siluetas están dibujadas al 90 % del tamaño original
+           (óvalo 16.5x18 -> 14.85x16.2, escalado sobre el centro de cada ojo a
+           80/120,108). Si vuelves a tocar el tamaño, escala las dos a la vez y
+           alrededor del mismo centro: cambiar solo el óvalo hace que el ojo
+           cambie de tamaño al entrar en `error`. -->
       <g class="mascot__eyes" [style.translate]="gazeOffset()">
         <!--
           El envoltorio existe solo para la perspectiva de la mirada: lleva el
@@ -52,12 +58,12 @@
               class="mascot__eye-shape mascot__eye-shape--calm"
               cx="80"
               cy="108"
-              rx="16.5"
-              ry="18"
+              rx="14.85"
+              ry="16.2"
             />
             <path
               class="mascot__eye-shape mascot__eye-shape--glare"
-              d="M62 95 C73 90 89 94 98 102 C94 120 79 126 69 119 C61 113 58 103 62 95 Z"
+              d="M63.8 96.3 C73.7 91.8 88.1 95.4 96.2 102.6 C92.6 118.8 79.1 124.2 70.1 117.9 C62.9 112.5 60.2 103.5 63.8 96.3 Z"
             />
           </g>
         </g>
@@ -67,12 +73,12 @@
               class="mascot__eye-shape mascot__eye-shape--calm"
               cx="120"
               cy="108"
-              rx="16.5"
-              ry="18"
+              rx="14.85"
+              ry="16.2"
             />
             <path
               class="mascot__eye-shape mascot__eye-shape--glare"
-              d="M138 95 C127 90 111 94 102 102 C106 120 121 126 131 119 C139 113 142 103 138 95 Z"
+              d="M136.2 96.3 C126.3 91.8 111.9 95.4 103.8 102.6 C107.4 118.8 120.9 124.2 129.9 117.9 C137.1 112.5 139.8 103.5 136.2 96.3 Z"
             />
           </g>
         </g>
