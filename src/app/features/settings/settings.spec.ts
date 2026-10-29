@@ -18,7 +18,7 @@ function createBridge(initial: SttStatus) {
     getSttStatus: vi.fn(async () => status),
     setSttKey: vi.fn(async (key: string) => {
       if (key === 'mala') return { ok: false as const, failure: 'auth' as const };
-      status = { configured: true, provider: 'groq' as const };
+      status = { configured: true, provider: 'deepgram' as const };
       return { ok: true as const, status };
     }),
     clearSttKey: vi.fn(async () => {
@@ -55,7 +55,7 @@ describe('Settings', () => {
     expect(fixture.nativeElement.querySelector('.settings__quiet')).toBeNull();
     expect(
       (fixture.nativeElement.querySelector('.settings__input') as HTMLInputElement).placeholder,
-    ).toContain('gsk_');
+    ).toContain('API key');
   });
 
   it('guarda una clave válida y vacía el campo', async () => {
@@ -113,7 +113,7 @@ describe('Settings', () => {
   });
 
   it('borra la clave guardada', async () => {
-    const fake = createBridge({ configured: true, provider: 'groq' });
+    const fake = createBridge({ configured: true, provider: 'deepgram' });
     TestBed.configureTestingModule({
       imports: [Settings],
       providers: [{ provide: MILO, useValue: fake.bridge }],

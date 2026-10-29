@@ -12,13 +12,15 @@ import type { SttFailure } from '../../../shared/ipc';
 export function bubbleMessage(failure: SttFailure): string {
   switch (failure) {
     case 'no-key':
-      return 'Me falta la clave de Groq: clic derecho sobre mí y Ajustes.';
+      return 'Me falta la clave de Deepgram: clic derecho sobre mí y Ajustes.';
     case 'auth':
-      return 'La clave de Groq no es válida. Revísala en Ajustes.';
+      return 'La clave de Deepgram no es válida. Revísala en Ajustes.';
     case 'quota':
-      return 'Groq me frena: límite gratuito alcanzado. Espera un minuto.';
+      return 'Deepgram me frena: cuota agotada o límite alcanzado.';
+    case 'blocked':
+      return 'Deepgram no me deja entrar desde esta red. Eso no se arregla con la clave.';
     case 'network':
-      return 'No pude conectar con Groq. ¿Tienes internet?';
+      return 'No pude conectar con Deepgram. ¿Tienes internet?';
     case 'audio':
       return 'No pude entender el audio. Prueba a hablar más cerca.';
     default:
@@ -30,11 +32,13 @@ export function bubbleMessage(failure: SttFailure): string {
 export function settingsMessage(failure: SttFailure): string {
   switch (failure) {
     case 'auth':
-      return 'Esa clave no es válida. Cópiala otra vez desde la consola de Groq.';
+      return 'Esa clave no es válida. Cópiala otra vez desde la consola de Deepgram.';
     case 'quota':
-      return 'Groq está limitando las peticiones. Prueba en un minuto.';
+      return 'Tu cuenta de Deepgram no tiene cuota disponible ahora mismo.';
+    case 'blocked':
+      return 'Deepgram está bloqueando esta red (403). Prueba con otra conexión o una VPN.';
     case 'network':
-      return 'No pude comprobar la clave: no hay conexión con Groq.';
+      return 'No pude comprobar la clave: no hay conexión con Deepgram.';
     default:
       return 'No pude guardar la clave. Inténtalo otra vez.';
   }

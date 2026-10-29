@@ -1,20 +1,23 @@
 <main class="settings">
   <header class="settings__header">
     <h1 class="settings__title">Ajustes de Milo</h1>
-    <p class="settings__lead">Milo oye con Groq. La clave es tuya: no viaja dentro de la app.</p>
+    <p class="settings__lead">
+      Milo oye con Deepgram. La clave es tuya: no viaja dentro de la app.
+    </p>
   </header>
 
   <section class="settings__block">
     <h2 class="settings__subtitle">Voz a texto</h2>
 
     <p class="settings__hint">
-      Crea una clave gratuita en
-      <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer">
-        console.groq.com/keys </a
-      >y pégala aquí. Se guarda cifrada en este equipo y no se manda a ningún otro sitio.
+      Crea una cuenta gratuita en
+      <a href="https://console.deepgram.com/signup" target="_blank" rel="noreferrer">
+        console.deepgram.com </a
+      >—incluye 200 $ de crédito— y pega aquí una API key. Se guarda cifrada en este equipo y no se
+      manda a ningún otro sitio.
     </p>
 
-    <label class="settings__label" for="stt-key">Clave de Groq</label>
+    <label class="settings__label" for="stt-key">API key de Deepgram</label>
     <div class="settings__row">
       <input
         id="stt-key"
@@ -22,7 +25,9 @@
         type="password"
         autocomplete="off"
         spellcheck="false"
-        [attr.placeholder]="configured ? 'Guardada ···· (pega otra para cambiarla)' : 'gsk_...'"
+        [attr.placeholder]="
+          configured ? 'Guardada ···· (pega otra para cambiarla)' : 'Pega tu API key'
+        "
         [value]="draft()"
         (input)="onInput($event)"
       />
@@ -48,6 +53,6 @@
   </section>
 
   <footer class="settings__footer">
-    El audio de cada frase se manda a Groq para transcribirlo. Nada más sale de este equipo.
+    El audio de cada frase se manda a Deepgram para transcribirlo. Nada más sale de este equipo.
   </footer>
 </main>

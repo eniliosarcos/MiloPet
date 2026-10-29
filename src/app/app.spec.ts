@@ -58,10 +58,10 @@ function createFakeBridge() {
       });
     },
     async getSttStatus() {
-      return { configured: true, provider: 'groq' };
+      return { configured: true, provider: 'deepgram' };
     },
     async setSttKey() {
-      return { ok: true, status: { configured: true, provider: 'groq' } };
+      return { ok: true, status: { configured: true, provider: 'deepgram' } };
     },
     async clearSttKey() {
       return { configured: false, provider: null };

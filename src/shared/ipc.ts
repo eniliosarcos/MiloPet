@@ -70,7 +70,7 @@ export interface HotkeyRegistration {
  * Hoy hay uno. La unión existe para que añadir otro no obligue a adivinar de
  * dónde salió la clave guardada.
  */
-export type SttProvider = 'groq';
+export type SttProvider = 'deepgram';
 
 /**
  * Estado de la clave del proveedor de voz.
@@ -84,7 +84,7 @@ export interface SttStatus {
 }
 
 /** Los motivos por los que una transcripción puede fallar, ya clasificados. */
-export type SttFailure = 'no-key' | 'auth' | 'quota' | 'network' | 'audio' | 'unknown';
+export type SttFailure = 'no-key' | 'auth' | 'quota' | 'blocked' | 'network' | 'audio' | 'unknown';
 
 /**
  * Audio de una frase listo para transcribir.

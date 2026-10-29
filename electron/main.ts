@@ -12,7 +12,7 @@ import { readConfig, writeConfig } from './config';
 import { disposeHotkeys, registerHotkey } from './hotkey';
 import { canStoreSecrets, clearSecret, readSecret, writeSecret } from './secrets';
 import { openSettingsWindow } from './settings';
-import { GroqTranscriber, TranscriberError } from './stt/transcriber';
+import { DeepgramTranscriber, TranscriberError } from './stt/transcriber';
 import {
   createMascotWindow,
   endWindowDrag,
@@ -31,10 +31,10 @@ let lastState: MascotState = 'idle';
  * Un nombre por proveedor y no uno genérico: el día que haya dos, cada clave
  * vive en su archivo y cambiar de proveedor no pisa la anterior.
  */
-const STT_SECRET = 'groq';
+const STT_SECRET = 'deepgram';
 
 /** Una instancia basta: no guarda estado entre peticiones. */
-const transcriber = new GroqTranscriber();
+const transcriber = new DeepgramTranscriber();
 
 /** Estado de la clave, sin revelarla nunca. */
 async function sttStatus(): Promise<SttStatus> {

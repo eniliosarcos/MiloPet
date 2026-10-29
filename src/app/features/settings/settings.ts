@@ -8,7 +8,7 @@ import { settingsMessage } from '../../core/stt/failure';
  * La pantalla de ajustes.
  *
  * Es la primera superficie de configuración del proyecto y existe por una razón
- * concreta: la clave de Groq la pone cada usuario, porque una clave dentro del
+ * concreta: la clave del proveedor la pone cada usuario, porque una clave dentro del
  * instalador es una clave regalada a quien sepa descomprimir el binario.
  *
  * Aquí se escribe, se valida y se borra la clave. Nunca se lee: el proceso main
