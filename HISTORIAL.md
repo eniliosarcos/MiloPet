@@ -8,6 +8,14 @@ Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 
 ## Historial
 
+### 2026-10-29 - Zonas: anillo de 14 px, alcance dentro de la ventana y marco del mundo · fix
+
+**Qué:** El anillo del arrastre pasa a 14 px y el hotspot a 115×71 px, `GAZE_RANGE` baja a 0,42 para que el círculo de la mirada quepa entero, y el modo dev pinta el borde de la ventana en violeta con su tamaño en píxeles.
+**Por qué:** con 8 px el arrastre no arrancaba al entrar rápido, y con 0,8 el alcance caía fuera de la ventana: la perilla no cambiaba nada visible y el overlay dibujaba un arco cortado que parecía un fallo.
+**Tocó:** `src/app/app.scss`, `app.html`, `app.ts`, `app.spec.ts`, `features/mascot/gaze.ts` y sus dos tests, `docs/ARQUITECTURA.md`, `docs/RECORRIDO-DEL-CODIGO.md`.
+**Aprendido:** la franja que desbloquea la ventana no arrastra: es el techo de `app-region: drag`; y dos tests fijaban el alcance con números propios (0,7 del lado, +150 px), ahora lo derivan de las constantes.
+**Commits:** `a227349`, `0f54c88`, `e001f89`
+
 ### 2026-10-29 - La mirada sigue al cursor de forma proporcional y continua · feat
 
 **Qué:** Los ojos se desplazan en proporción a la distancia al cursor hasta `GAZE_REACH` (0,25 del lado) y se saturan después; la pareja gana perspectiva (30 % de estrechamiento en el ojo que apunta, 8 % de ensanche en el otro) y seguir usa 100 ms `linear`.
