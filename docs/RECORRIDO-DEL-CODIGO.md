@@ -115,9 +115,12 @@ document.elementFromPoint(x, y)?.closest('[data-interactive]');
 ```
 
 En cada `mousemove`, Angular pregunta: "¿qué elemento hay debajo del cursor?".
-Si es el hotspot, avisa al proceso main para que acepte clics. Si no, los deja
-pasar. Y solo cruza IPC cuando el valor **cambia**, porque `mousemove` dispara
-decenas de eventos por segundo.
+Si está dentro de una zona `[data-interactive]`, avisa al proceso main para que
+acepte clics. Si no, los deja pasar. Y solo cruza IPC cuando el valor **cambia**,
+porque `mousemove` dispara decenas de eventos por segundo.
+
+Hoy esas zonas son dos: `.hotspot` (el personaje) y `.bubble-wrap` (para que
+funcione la (x)). La segunda existe solo mientras hay un mensaje en pantalla.
 
 ---
 
@@ -126,8 +129,8 @@ decenas de eventos por segundo.
 Tres capas, en orden:
 
 1. `.stage__bubble` — arriba, la burbuja. Solo existe si `message()` tiene texto.
-2. `.hotspot` — un círculo invisible sobre el personaje. Es la **única** zona
-   cliqueable de toda la ventana.
+2. `.hotspot` — un círculo invisible sobre el personaje. La zona cliqueable del
+   personaje (la burbuja trae la suya, para la (x)).
 3. `app-mascot` — el personaje, abajo.
 
 El detalle que confunde al principio: `pointer-events: none` está en el
@@ -183,8 +186,20 @@ El componente más pequeño del proyecto y el más fácil de entender.
 
 - `text = input.required<string>()` — no se puede crear una burbuja vacía.
 - `tone = input<BubbleTone>('neutral')` — `'neutral'` o `'error'`.
+- `leaving = input(false)` — mientras es `true`, se está desvaneciendo. El padre
+  la retira del DOM al terminar la animación.
+- `dismiss = output<void>()` — la (x) avisa de que el usuario quiere cerrarla.
 - `role="status"` + `aria-live="polite"` — un lector de pantalla anuncia el
   mensaje sin interrumpir lo que la persona esté leyendo.
+
+El envoltorio `.bubble-wrap` lleva `data-interactive`. No es un detalle de estilo:
+sin ese atributo, la (x) sería un botón muerto en Electron, porque la ventana solo
+acepta clics donde `elementFromPoint` lo encuentra (ver el truco del click-through).
+
+La burbuja dura `4000` ms de lectura más `420` ms de desvanecido, y ambos tiempos
+viven en `app.ts` (`BUBBLE_VISIBLE_MS`, `BUBBLE_FADE_MS`). El reloj arranca al
+volver a `idle`, no al aparecer el texto: así el tiempo de lectura es siempre el
+mismo, sin importar cuánto dure `acting`.
 
 Sin voz, sin TTS, sin audio. Es una decisión de producto: Milo aparece, dice algo
 breve y se va. Un asistente que habla cada dos minutos termina silenciado.
@@ -300,6 +315,12 @@ plano**. Van con `safeStorage.encryptString()` (DPAPI en Windows).
         │
         ▼
 8. state = 'idle'            Milo vuelve a respirar
+        │
+        ▼
+9. setTimeout(4000)          SIMULADO no: tiempo real de lectura
+        │
+        ▼
+10. bubble-out (420ms)       la burbuja se desvanece y sale del DOM
 ```
 
 Ese es todo el sistema. La fase 2 reemplaza el paso 6; la fase 3, el 7. Nada más
@@ -321,7 +342,7 @@ cambia de sitio.
 | **CSP**      | Lista de qué puede cargar la página.                       |
 | **VAD**      | Detección de voz: saber cuándo hablas y cuándo callas.     |
 | **STT**      | Voz a texto (Whisper).                                     |
-| **Hotspot**  | La zona cliqueable del personaje.                          |
+| **Hotspot**  | La zona cliqueable: hay dos, el personaje y la burbuja.    |
 
 ---
 
@@ -340,9 +361,11 @@ recorrer la frontera.
    en `mascot.scss` y dispara ese estado desde `app.ts`. Fíjate en cuántos
    archivos tuviste que tocar: esa es la forma del contrato.
 
-3. **Hacer que la burbuja dure más.**
-   Cambia el `3200` de `app.ts`. Es el único sitio donde vive esa decisión; si
-   tuvieras que buscar en tres archivos, algo estaría mal diseñado.
+3. **Hacer que la burbuja dure más (o menos).**
+   Cambia `BUBBLE_VISIBLE_MS` en `app.ts` y, si tocas el desvanecido, cambia
+   también `BUBBLE_FADE_MS` y la animación `bubble-out` de `bubble.scss`. Esos
+   dos números son un contrato: si no coinciden, la burbuja desaparece del DOM a
+   mitad de la animación y se ve un salto.
 
 ---
 

@@ -97,7 +97,10 @@ lado, **el build falla** en vez de romperse en silencio.
 clics a lo que haya detrás — Milo nunca bloquea tu trabajo. Pero necesitamos que
 reaccione al ratón, así que `app.ts` escucha `mousemove`, pregunta con
 `elementFromPoint` si el cursor está sobre `[data-interactive]`, y solo entonces
-reactiva los clics. El "punto caliente" es `.hotspot` en `app.scss`.
+reactiva los clics. Hoy hay dos puntos calientes: `.hotspot` en `app.scss` para el
+personaje y `.bubble-wrap` en la burbuja, que existe solo para que la (x) reciba
+clics. Olvidar el segundo produce el fallo más confuso del proyecto: un botón que
+funciona en `npm run dev:web` y está muerto en la ventana real.
 
 **5. El atajo no soporta "mantener apretado".**
 `globalShortcut` de Electron no emite eventos de tecla liberada. Por eso el
@@ -136,6 +139,7 @@ npm run dev:web      # solo Chrome, para pulir el personaje
 | Mover o redimensionar la ventana          | `electron/window.ts`                                      |
 | Cambiar el tamaño del área cliqueable     | `.hotspot` en `src/app/app.scss`                          |
 | Cambiar el estilo de la burbuja           | `features/bubble/bubble.scss`                             |
+| Cuánto dura el mensaje en pantalla        | `BUBBLE_VISIBLE_MS` en `src/app/app.ts`                   |
 
 ## Reglas que no se negocian
 
