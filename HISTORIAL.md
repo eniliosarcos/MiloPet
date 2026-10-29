@@ -7,6 +7,36 @@ Cada entrada responde: qué se hizo, por qué, y en qué archivos.
 
 ## Historial
 
+### 2026-10-28 — Publicación en GitHub
+
+**Tipo:** config
+
+**Descripción:**
+El repositorio se subió a <https://github.com/eniliosarcos/MiloPet> en la rama
+`main`, con 7 commits.
+
+Trabajo previo necesario: los commits originales estaban firmados con
+`esarcos@chattigo.com` (el correo laboral configurado globalmente). Se configuró
+la identidad **solo para este repositorio** — `eniliosarcosdev@gmail.com` — y se
+reescribieron los 7 commits (autor y committer) para que GitHub los atribuya a la
+cuenta correcta y para no publicar el correo de trabajo en un repo público.
+
+La configuración global de git no se tocó: sigue siendo el correo laboral para
+los demás proyectos.
+
+**Archivos:**
+
+| Archivo        | Qué hace                                           |
+| -------------- | -------------------------------------------------- |
+| `.git/config`  | Identidad local y remoto `origin`. No se versiona. |
+| `HISTORIAL.md` | Esta entrada.                                      |
+
+**Decisión clave:**
+Identidad local (`git config user.email` sin `--global`) en vez de global. Si se
+cambia el global, todos los repos de la máquina heredan un correo que quizá no
+corresponde a ese proyecto; y en sentido inverso, un repo público nunca debe
+arrastrar el correo de la empresa.
+
 ### 2026-10-28 — Calidad, convenciones y CI
 
 **Tipo:** chore (tooling) + docs
