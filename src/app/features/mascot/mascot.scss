@@ -87,6 +87,21 @@
     glance 9s ease-in-out infinite;
 }
 
+// Escala que aporta el estado (hoy solo `listening`). Vive en un envoltorio
+// propio porque no hay hueco en los otros dos: `.mascot__eye` ya anima
+// `transform` y `.mascot__eye-scaler` lo recibe inline desde la mirada. Mismo
+// anclaje al borde interno, por la misma razón: escalar la pareja desde su
+// centro separa los ojos al "respirar".
+.mascot__eye-state {
+  transform-box: fill-box;
+  transform-origin: 100% 50%;
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mascot__eye--right .mascot__eye-state {
+  transform-origin: 0% 50%;
+}
+
 // Los 700ms son la vuelta al reposo. Seguir al cursor es otra cosa y la fija la
 // regla de `[data-gaze='true']`, más abajo.
 //
@@ -126,7 +141,10 @@
     animation: pulse 1.6s ease-out infinite;
   }
   .mascot__eyes {
-    transform: translateY(-3px) scale(1.06);
+    transform: translateY(-3px);
+  }
+  .mascot__eye-state {
+    transform: scale(1.06);
   }
 }
 

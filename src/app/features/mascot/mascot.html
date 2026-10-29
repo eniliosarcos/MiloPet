@@ -47,39 +47,46 @@
            cambie de tamaño al entrar en `error`. -->
       <g class="mascot__eyes" [style.translate]="gazeOffset()">
         <!--
-          El envoltorio existe solo para la perspectiva de la mirada: lleva el
-          `transform` y deja que el ojo conserve sus animaciones. Poner la escala
-          en el propio `.mascot__eye` la vuelve invisible: con una animación de
-          `transform` en el mismo elemento, el navegador pinta el ojo sin ella.
+          Dos envoltorios por ojo, y ninguno es decoración:
+          - `.mascot__eye-state` lleva la escala que pide el estado (`listening`).
+          - `.mascot__eye-scaler` lleva la perspectiva de la mirada (inline).
+          Poner cualquiera de las dos en `.mascot__eye` la vuelve invisible: con
+          una animación de `transform` en el mismo elemento, el navegador pinta
+          el ojo sin ella. Y el `transform` inline del scaler es lo que impide
+          que la escala del estado viva ahí.
         -->
         <g class="mascot__eye mascot__eye--left">
-          <g class="mascot__eye-scaler" [style.transform]="eyeScale().left">
-            <ellipse
-              class="mascot__eye-shape mascot__eye-shape--calm"
-              cx="80"
-              cy="108"
-              rx="14.85"
-              ry="16.2"
-            />
-            <path
-              class="mascot__eye-shape mascot__eye-shape--glare"
-              d="M63.8 96.3 C73.7 91.8 88.1 95.4 96.2 102.6 C92.6 118.8 79.1 124.2 70.1 117.9 C62.9 112.5 60.2 103.5 63.8 96.3 Z"
-            />
+          <g class="mascot__eye-state">
+            <g class="mascot__eye-scaler" [style.transform]="eyeScale().left">
+              <ellipse
+                class="mascot__eye-shape mascot__eye-shape--calm"
+                cx="80"
+                cy="108"
+                rx="14.85"
+                ry="16.2"
+              />
+              <path
+                class="mascot__eye-shape mascot__eye-shape--glare"
+                d="M63.8 96.3 C73.7 91.8 88.1 95.4 96.2 102.6 C92.6 118.8 79.1 124.2 70.1 117.9 C62.9 112.5 60.2 103.5 63.8 96.3 Z"
+              />
+            </g>
           </g>
         </g>
         <g class="mascot__eye mascot__eye--right">
-          <g class="mascot__eye-scaler" [style.transform]="eyeScale().right">
-            <ellipse
-              class="mascot__eye-shape mascot__eye-shape--calm"
-              cx="120"
-              cy="108"
-              rx="14.85"
-              ry="16.2"
-            />
-            <path
-              class="mascot__eye-shape mascot__eye-shape--glare"
-              d="M136.2 96.3 C126.3 91.8 111.9 95.4 103.8 102.6 C107.4 118.8 120.9 124.2 129.9 117.9 C137.1 112.5 139.8 103.5 136.2 96.3 Z"
-            />
+          <g class="mascot__eye-state">
+            <g class="mascot__eye-scaler" [style.transform]="eyeScale().right">
+              <ellipse
+                class="mascot__eye-shape mascot__eye-shape--calm"
+                cx="120"
+                cy="108"
+                rx="14.85"
+                ry="16.2"
+              />
+              <path
+                class="mascot__eye-shape mascot__eye-shape--glare"
+                d="M136.2 96.3 C126.3 91.8 111.9 95.4 103.8 102.6 C107.4 118.8 120.9 124.2 129.9 117.9 C137.1 112.5 139.8 103.5 136.2 96.3 Z"
+              />
+            </g>
           </g>
         </g>
       </g>

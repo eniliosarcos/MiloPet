@@ -193,6 +193,12 @@ separación es constante y todo el cambio cae en el contorno exterior, que es lo
 que hace un ojo real cuando la cara gira. La contrapartida es que la pareja ya no
 respira hacia el centro: el tamaño se nota en el borde de fuera y no en el hueco.
 
+El 6 % de `listening` viaja por el mismo camino y en un tercer envoltorio,
+`.mascot__eye-state`: escalar la pareja entera desde su centro hacía lo mismo a
+menor escala, y el `scaler` ya está ocupado por el `transform` inline de la
+mirada. Son tres grupos por ojo y cada uno tiene un dueño distinto —el estado, la
+mirada y el parpadeo—, que es lo que evita que se pisen.
+
 El desplazamiento es **proporcional** a la distancia al cursor hasta `GAZE_REACH`
 (0,25 del lado) y se satura después. La alternativa era un vector unitario, que
 mantiene la mirada siempre al máximo y solo cambia de dirección: medido a 60 fps,
