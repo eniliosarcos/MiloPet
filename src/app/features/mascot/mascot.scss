@@ -11,7 +11,8 @@
   width: 100%;
   height: 100%;
   overflow: visible;
-  filter: drop-shadow(0 12px 20px rgba(15, 118, 110, 0.22));
+  // Sombra neutra: con un cuerpo negro, un halo de color se ve sucio.
+  filter: drop-shadow(0 12px 20px rgba(15, 23, 42, 0.28));
 }
 
 .mascot__shadow {
@@ -23,55 +24,65 @@
   transform-box: fill-box;
   transform-origin: 50% 100%;
   animation: breathe 4.5s ease-in-out infinite;
-}
-
-.mascot__ear {
-  fill: #5eead4;
-}
-
-.mascot__sclera {
-  fill: #f8fafc;
-}
-
-.mascot__pupil {
-  fill: #0f172a;
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.mascot__spark {
-  fill: #ffffff;
-  opacity: 0.9;
+  // El borde blanco. `stroke` se dibuja centrado, así que la mitad queda fuera
+  // del relleno: es lo que separa al personaje de un fondo oscuro.
+  stroke: #f8fafc;
+  stroke-width: 5;
 }
 
 .mascot__mouth {
   fill: none;
-  stroke: #0f172a;
+  // Blanco: sobre el cuerpo negro, la boca oscura desaparecía.
+  stroke: #f8fafc;
   stroke-width: 3.4;
   stroke-linecap: round;
   transform-box: fill-box;
   transform-origin: center;
-  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.mascot__cheek {
-  opacity: 0.85;
+  // Oculta casi siempre: el gesto lo llevan los ojos.
+  opacity: 0;
+  transition:
+    transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 180ms ease-out;
 }
 
 .mascot__pulse {
   fill: none;
-  stroke: #2dd4bf;
+  // Coherente con el borde: el personaje es monocromo.
+  stroke: #e2e8f0;
   stroke-width: 2;
   opacity: 0;
   transform-box: fill-box;
   transform-origin: center;
 }
 
-.mascot__eye {
+// El conjunto: lo que el estado mueve (arriba al escuchar, de lado al pensar).
+.mascot__eyes {
   transform-box: fill-box;
   transform-origin: center;
-  animation: blink 6.5s infinite;
+  transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+// Cada ojo es una forma blanca. Dos animaciones conviven sin pisarse porque
+// atacan propiedades distintas: `blink` usa `transform` y `glance` usa
+// `translate` (propiedad individual), que se aplica antes del transform.
+.mascot__eye {
+  fill: #f8fafc;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation:
+    blink 6.5s infinite,
+    glance 9s ease-in-out infinite;
+}
+
+// Dos siluetas por ojo, cruzadas por opacidad: óvalo en reposo, párpado caído
+// al fallar. Se mantienen ambas en el árbol para que el parpadeo no salte de
+// caja al cambiar de forma.
+.mascot__eye-shape {
+  transition: opacity 180ms ease-out;
+}
+
+.mascot__eye-shape--glare {
+  opacity: 0;
 }
 
 .mascot[data-state='listening'] {
@@ -81,23 +92,20 @@
   .mascot__pulse {
     animation: pulse 1.6s ease-out infinite;
   }
-  .mascot__pupil {
-    transform: translateY(-2px) scale(1.12);
-  }
-  .mascot__mouth {
-    transform: scale(0.62);
+  .mascot__eyes {
+    transform: translateY(-3px) scale(1.06);
   }
 }
 
 .mascot[data-state='thinking'] {
-  .mascot__pupil {
-    transform: translate(-5px, -5px);
+  .mascot__eyes {
+    transform: translateX(5px);
   }
-  .mascot__mouth {
-    transform: scale(0.45) translateY(2px);
-  }
+  // Piensa más rápido: parpadea más y la mirada barre en tramos cortos.
   .mascot__eye {
-    animation: blink 2.4s infinite;
+    animation:
+      blink 2.4s infinite,
+      glance 3.6s ease-in-out infinite;
   }
 }
 
@@ -105,7 +113,9 @@
   .mascot__torso {
     animation: bounce 620ms cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
   }
+  // Único estado con boca: sonrisa abierta.
   .mascot__mouth {
+    opacity: 1;
     transform: scale(1.25, 1.6);
   }
 }
@@ -115,11 +125,21 @@
     animation: none;
     transform: translateY(4px) scale(1.06, 0.9);
   }
-  .mascot__pupil {
-    transform: translateY(4px) scale(0.8);
+  // Aquí sí hay mirada de enojo: el óvalo se apaga y entra la silueta con el
+  // párpado caído. El `scaleY` va en el conjunto porque el ojo ya anima su
+  // propio `transform` con el parpadeo.
+  .mascot__eyes {
+    transform: translateY(1px) scale(1, 0.92);
+  }
+  .mascot__eye-shape--calm {
+    opacity: 0;
+  }
+  .mascot__eye-shape--glare {
+    opacity: 1;
   }
   .mascot__mouth {
-    transform: scale(1.1, 0.35) translateY(4px);
+    opacity: 1;
+    transform: scale(1.05, -0.9) translateY(-2px);
   }
 }
 
@@ -142,6 +162,22 @@
   95%,
   97% {
     transform: scaleY(0.12);
+  }
+}
+
+// Barrido de mirada: dos posiciones laterales sostenidas y un regreso central.
+@keyframes glance {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  16%,
+  36% {
+    translate: -5px 0;
+  }
+  56%,
+  76% {
+    translate: 5px 0;
   }
 }
 

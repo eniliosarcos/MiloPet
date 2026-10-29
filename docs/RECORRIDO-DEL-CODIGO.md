@@ -171,24 +171,33 @@ Tres archivos, una idea: **Milo es geometría, no imágenes**.
 La técnica central es CSS puro:
 
 ```scss
-.mascot[data-state='thinking'] {
-  .mascot__pupil {
-    transform: translate(-5px, -5px);
-  } // mira en diagonal
-  .mascot__mouth {
-    transform: scale(0.45);
-  } // boca apretada
+.mascot[data-state='error'] {
+  .mascot__eye-shape--calm {
+    opacity: 0;
+  } // se apaga el óvalo
+  .mascot__eye-shape--glare {
+    opacity: 1;
+  } // entra el párpado caído
 }
 ```
 
 Cambiar `data-state` cambia el dibujo, sin JavaScript por medio. Cada estado
-tiene su propia animación (`breathe`, `listening`, `bounce`, `blink`, `pulse`).
+tiene su propia animación (`breathe`, `listening`, `bounce`, `blink`, `glance`,
+`pulse`).
 
-Dos detalles que cuestan:
+Cuatro detalles que cuestan:
 
 - `transform-box: fill-box` + `transform-origin` son obligatorios para que un
   `scale` en una forma SVG se comporte como esperas. Sin eso, la elipse se
   escala desde el origen del SVG y "salta" a otra parte.
+- El ojo tiene **dos siluetas** (`.mascot__eye-shape--calm` y `--glare`) y el
+  estado las cruza por `opacity`. No es capricho: el parpadeo ya anima el
+  `transform` del ojo, y una animación gana a cualquier `transform` que
+  declararía el estado. Cruzando opacidades, la forma cambia sin tocar la
+  animación.
+- La mirada barre con la propiedad individual `translate`, no con `transform`:
+  así el barrido (`glance`) y el parpadeo (`blink`, que usa `transform:
+scaleY`) se componen en vez de pisarse.
 - La sombra en el suelo (`mascot__shadow`) no es decorativa: sin ella, el
   personaje parece flotar.
 

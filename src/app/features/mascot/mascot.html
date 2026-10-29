@@ -6,16 +6,12 @@
 -->
 <svg class="mascot" viewBox="0 0 200 200" [attr.data-state]="state()" aria-hidden="true">
   <defs>
-    <!-- Degradado del cuerpo: le da volumen sin sombras ni texturas externas. -->
-    <radialGradient id="miloBody" cx="38%" cy="28%" r="78%">
-      <stop offset="0%" stop-color="#a7f3d0" />
-      <stop offset="55%" stop-color="#5eead4" />
-      <stop offset="100%" stop-color="#2dd4bf" />
-    </radialGradient>
-    <!-- Mejillas: el centro es opaco y el borde se desvanece a transparente. -->
-    <radialGradient id="miloCheek" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#fb7185" stop-opacity="0.55" />
-      <stop offset="100%" stop-color="#fb7185" stop-opacity="0" />
+    <!-- Degradado del cuerpo: gris arriba a la izquierda y negro en el borde.
+         El foco de luz desplazado es lo que da volumen sin sombras artificiales. -->
+    <radialGradient id="miloBody" cx="36%" cy="26%" r="82%">
+      <stop offset="0%" stop-color="#52525b" />
+      <stop offset="52%" stop-color="#27272a" />
+      <stop offset="100%" stop-color="#09090b" />
     </radialGradient>
   </defs>
 
@@ -25,33 +21,48 @@
   <circle class="mascot__pulse" cx="100" cy="116" r="72" />
 
   <g class="mascot__body">
-    <!-- Orejas: dos triángulos curvos, uno a cada lado del torso. -->
-    <path class="mascot__ear mascot__ear--left" d="M56 78 C48 44 62 30 78 52 Z" />
-    <path class="mascot__ear mascot__ear--right" d="M144 78 C152 44 138 30 122 52 Z" />
-
     <!-- Torso: una elipse que respira. `transform-origin` abajo para que el
-         movimiento se sienta como peso, no como flotación. -->
+         movimiento se sienta como peso, no como flotación. El borde blanco lo
+         dibuja `.mascot__torso` en `mascot.scss`. -->
     <ellipse class="mascot__torso" cx="100" cy="116" rx="62" ry="56" fill="url(#miloBody)" />
 
     <g class="mascot__face">
-      <!-- Cada ojo es un grupo: esclerótica, pupila y brillo. La pupila se mueve
-           sola según el estado (mirando arriba al escuchar, en diagonal al pensar). -->
-      <g class="mascot__eye mascot__eye--left">
-        <ellipse class="mascot__sclera" cx="80" cy="108" rx="17" ry="19" />
-        <circle class="mascot__pupil" cx="80" cy="108" r="8.5" />
-        <circle class="mascot__spark" cx="84" cy="103" r="2.6" />
-      </g>
-      <g class="mascot__eye mascot__eye--right">
-        <ellipse class="mascot__sclera" cx="120" cy="108" rx="17" ry="19" />
-        <circle class="mascot__pupil" cx="120" cy="108" r="8.5" />
-        <circle class="mascot__spark" cx="124" cy="103" r="2.6" />
+      <!-- Cada ojo es una forma blanca maciza: sin esclerótica, sin pupila y sin
+           brillo. Tiene dos siluetas y el estado decide cuál se ve:
+           el óvalo es el reposo, y la forma con el párpado caído hacia dentro
+           solo aparece al fallar. El grupo `.mascot__eye` es el que parpadea y
+           barre la mirada; `.mascot__eyes` desplaza el conjunto. -->
+      <g class="mascot__eyes">
+        <g class="mascot__eye mascot__eye--left">
+          <ellipse
+            class="mascot__eye-shape mascot__eye-shape--calm"
+            cx="80"
+            cy="108"
+            rx="16.5"
+            ry="18"
+          />
+          <path
+            class="mascot__eye-shape mascot__eye-shape--glare"
+            d="M62 95 C73 90 89 94 98 102 C94 120 79 126 69 119 C61 113 58 103 62 95 Z"
+          />
+        </g>
+        <g class="mascot__eye mascot__eye--right">
+          <ellipse
+            class="mascot__eye-shape mascot__eye-shape--calm"
+            cx="120"
+            cy="108"
+            rx="16.5"
+            ry="18"
+          />
+          <path
+            class="mascot__eye-shape mascot__eye-shape--glare"
+            d="M138 95 C127 90 111 94 102 102 C106 120 121 126 131 119 C139 113 142 103 138 95 Z"
+          />
+        </g>
       </g>
 
-      <!-- Mejillas: dos manchas rosadas que dan la expresividad "amable". -->
-      <ellipse class="mascot__cheek" cx="58" cy="130" rx="13" ry="9" fill="url(#miloCheek)" />
-      <ellipse class="mascot__cheek" cx="142" cy="130" rx="13" ry="9" fill="url(#miloCheek)" />
-
-      <!-- Boca: una curva abierta. `scale` la cierra o la abre por estado. -->
+      <!-- Boca: oculta por defecto. Solo aparece al actuar (sonrisa) y al
+           fallar (ceño, la misma curva invertida). -->
       <path class="mascot__mouth" d="M90 142 Q100 152 110 142" />
     </g>
   </g>

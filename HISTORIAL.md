@@ -8,6 +8,14 @@ Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 
 ## Historial
 
+### 2026-10-29 — Cara de Milo: ojos sin pupila y boca oculta · feat
+
+**Qué:** El personaje pierde orejas, cachetes y pupilas; cada ojo es una forma blanca con óvalo en reposo y párpado de enojo solo al fallar, la mirada barre y la boca apenas aparece.
+**Por qué:** el usuario quería un gesto anime sentido, con los ojos como única animación.
+**Tocó:** `src/app/features/mascot/mascot.html`, `src/app/features/mascot/mascot.scss`, `docs/RECORRIDO-DEL-CODIGO.md`.
+**Aprendido:** una animación gana a cualquier `transform` declarado por el estado, así que el cambio de forma se hace cruzando dos siluetas por `opacity`; el barrido usa la propiedad individual `translate` para no pisar el parpadeo.
+**Commits:** `PENDIENTE`
+
 ### 2026-10-29 — Arrastrar a Milo y recordar dónde quedó · feat
 
 **Qué:** El personaje se arrastra a cualquier punto de la pantalla y la posición se guarda al soltar.
