@@ -29,17 +29,17 @@ de todo lo que requiere permisos. **El renderer nunca toca Node.**
         │  (globalShortcut, nivel sistema operativo)
         ▼
 electron/hotkey.ts  ──►  electron/main.ts
-                              │  ipcRenderer.send('milo:hotkey')
+                              │  sendToRenderer('milo:hotkey')
                               ▼
                     electron/preload.ts  (contextBridge)
                               │
                               ▼
-                    src/app/app.ts  (máquina de estados)
+        src/app/core/interaction/interaction.ts  (máquina de estados)
                               │
-              ┌───────────────┴───────────────┐
-              ▼                               ▼
-      app-mascot (SVG)                app-bubble (texto)
-      estado: listening                mensaje: ...
+              ┌───────────────┼───────────────┐
+              ▼               ▼               ▼
+      app-mascot (SVG)  app-bubble (texto)  core/audio → main → Deepgram
+      estado: listening   mensaje: ...      texto transcrito
 ```
 
 Nada de eso cruza por `nodeIntegration`. El renderer solo puede llamar a los

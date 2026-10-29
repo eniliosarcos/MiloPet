@@ -60,11 +60,21 @@ vería un rectángulo sólido alrededor del personaje.
 ## 2. Arranque de Angular: `src/main.ts` y `src/app/app.config.ts`
 
 ```ts
-bootstrapApplication(App, appConfig);
+const isSettings = new URLSearchParams(location.search).has('settings');
+bootstrapApplication(isSettings ? Settings : App, appConfig);
 ```
 
-Una línea: "monta el componente `App` usando esta configuración". No hay
-`AppModule` porque Angular moderno trabaja con componentes independientes
+Dos ventanas, una build. La mascota y los ajustes son componentes raíz distintos
+y se eligen por la query: así la ventana de ajustes no instancia la máquina de
+estados, no se suscribe al atajo global y no abre el micrófono.
+
+El detalle que cuesta un rato si no se sabe: `bootstrapApplication` engancha el
+componente al elemento del DOM que coincide con su **selector**, y `index.html`
+solo trae `<app-root>`. Si la ventana es la de ajustes, `main.ts` crea el host
+(`<app-settings>`) antes de arrancar. Sin él, Angular arranca, no dibuja nada y
+no lanza ningún error.
+
+No hay `AppModule` porque Angular moderno trabaja con componentes independientes
 (_standalone_). Cada componente declara sus propias importaciones.
 
 `app.config.ts` solo registra `provideBrowserGlobalErrorListeners()`: los errores
@@ -83,16 +93,17 @@ tres cosas:
 1. Escucha el atajo y se lo pasa al bucle.
 2. Le dice al proceso main si la ventana debe aceptar clics.
 3. Arrastra la ventana por IPC (ver la sección 8).
+4. Abre los ajustes con el clic derecho sobre el personaje.
 
 ### Los cinco conceptos de Angular que usa
 
-| Concepto                         | Qué hace aquí                                             | Por qué                                                                                 |
-| -------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `signal()`                       | Guarda `state`, `message` y `tone`.                       | Cambiar un signal avisa a la vista automáticamente. No hay `subscribe` ni `async pipe`. |
-| `effect()`                       | Cada vez que cambia `state()`, llama a `milo.setState()`. | Sincroniza el renderer con el proceso main sin código repetido.                         |
-| `inject(MILO)`                   | Obtiene el puente a Electron.                             | Inyección de dependencias: en tests se reemplaza por un falso.                          |
-| `DestroyRef`                     | Cancela listeners y timers al destruir el componente.     | Sin esto quedan timers vivos apuntando a una instancia muerta.                          |
-| `ChangeDetectionStrategy.OnPush` | La vista solo se revisa cuando cambian sus signals.       | Rendimiento: no recorremos el árbol en cada evento.                                     |
+| Concepto                         | Qué hace aquí                                                           | Por qué                                                                                 |
+| -------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `signal()`                       | Guarda `state`, `message` y `tone`, que viven en el servicio del bucle. | Cambiar un signal avisa a la vista automáticamente. No hay `subscribe` ni `async pipe`. |
+| `effect()`                       | Cada vez que cambia `state()`, llama a `milo.setState()`.               | Sincroniza el renderer con el proceso main sin código repetido.                         |
+| `inject(MILO)`                   | Obtiene el puente a Electron.                                           | Inyección de dependencias: en tests se reemplaza por un falso.                          |
+| `DestroyRef`                     | Cancela listeners y timers al destruir el componente.                   | Sin esto quedan timers vivos apuntando a una instancia muerta.                          |
+| `ChangeDetectionStrategy.OnPush` | La vista solo se revisa cuando cambian sus signals.                     | Rendimiento: no recorremos el árbol en cada evento.                                     |
 
 ### La máquina de estados
 
@@ -135,6 +146,12 @@ Del micrófono al texto hay cuatro paradas, y cada una vive donde puede probarse
 RMS cada 50 ms y se lo pasa al VAD. El WAV se construye en el main
 (`src/shared/audio.ts`), no en el renderer: el renderer manda muestras y el main
 decide el contenedor.
+
+**Deepgram** es el servicio que convierte audio en texto. El micrófono es local, el
+modelo (Nova) corre en sus servidores, y por eso se paga por minuto de audio y
+hace falta una clave. La alternativa sería un modelo local: gratis y sin cuenta,
+pero hay que descargarlo y tarda segundos por frase. El proveedor está detrás de
+`Transcriber` para que cambiar de idea sea un archivo.
 
 El audio se recoge con un `ScriptProcessorNode` conectado a una ganancia a cero.
 Está obsoleto, pero sigue vivo y no obliga a servir un `AudioWorklet` aparte ni a
@@ -288,7 +305,8 @@ scaleY`) se componen en vez de pisarse.
 El componente más pequeño del proyecto y el más fácil de entender.
 
 - `text = input.required<string>()` — no se puede crear una burbuja vacía.
-- `tone = input<BubbleTone>('neutral')` — `'neutral'` o `'error'`.
+- `tone = input<MessageTone>('neutral')` — `'neutral'` o `'error'`. El tipo vive
+  en el bucle, no en la burbuja: el tono es semántico, la burbuja solo lo pinta.
 - `leaving = input(false)` — mientras es `true`, se está desvaneciendo. El padre
   la retira del DOM al terminar la animación.
 - `dismiss = output<void>()` — la (x) avisa de que el usuario quiere cerrarla.
@@ -300,11 +318,11 @@ sin ese atributo, la (x) sería un botón muerto en Electron, porque la ventana 
 acepta clics donde `elementFromPoint` lo encuentra (ver el truco del click-through).
 
 La burbuja dura `4000` ms de lectura más `420` ms de desvanecido, y ambos tiempos
-viven en `app.ts` (`BUBBLE_VISIBLE_MS`, `BUBBLE_FADE_MS`). El reloj arranca al
-volver a `idle`, no al aparecer el texto: así el tiempo de lectura es siempre el
-mismo, sin importar cuánto dure `acting`.
+viven en `core/interaction/interaction.ts` (`BUBBLE_VISIBLE_MS`,
+`BUBBLE_FADE_MS`). El reloj arranca al volver a `idle`, no al aparecer el texto:
+así el tiempo de lectura es siempre el mismo, sin importar cuánto dure `acting`.
 
-Sin voz, sin TTS, sin audio. Es una decisión de producto: Milo aparece, dice algo
+Sin voz de salida, sin TTS. Es una decisión de producto: Milo aparece, dice algo
 breve y se va. Un asistente que habla cada dos minutos termina silenciado.
 
 ---
@@ -316,7 +334,8 @@ breve y se va. Un asistente que habla cada dos minutos termina silenciado.
 Define tres cosas:
 
 1. `CHANNELS` — los nombres de los canales IPC, como constantes.
-2. Los tipos (`MascotState`, `MiloConfig`, `HotkeyRegistration`).
+2. Los tipos (`MascotState`, `MiloConfig`, `HotkeyRegistration`, y los de voz:
+   `SttStatus`, `SttFailure`, `SpeechClip`, `TranscribeResult`, `SetKeyResult`).
 3. `MiloBridge` — la interfaz de lo que el renderer puede hacer.
 
 Este archivo se compila **dos veces**: dentro de Angular y dentro de Electron
@@ -351,12 +370,18 @@ En orden:
 
 1. `requestSingleInstanceLock()` — si ya hay un Milo abierto, este se cierra.
    Dos instancias pelearían por el mismo atajo global.
-2. `registerIpc()` — conecta cada canal con su handler.
-3. `createMascotWindow()` — crea la ventana.
+2. `registerIpc()` — conecta cada canal con su handler. Incluye la voz
+   (`transcribe`, `getSttStatus`, `setSttKey`, `clearSttKey`), que es donde se
+   lee la clave cifrada y se llama a Deepgram.
+3. `createMascotWindow()` — crea la ventana y cierra sus permisos.
 4. `startHotkey()` — registra el atajo guardado.
 
 Al cerrar, `will-quit` llama a `disposeHotkeys()`. Sin eso, el atajo sigue
 secuestrado después de cerrar la app y Windows lo reporta como ocupado.
+
+`openSettingsWindow()` vive en `settings.ts` y se abre desde el clic derecho o
+desde el aviso de "falta la clave". Es una ventana normal —con marco y en la
+barra de tareas— porque se escribe en ella, al contrario que la mascota.
 
 ### `window.ts` — la ventana imposible
 
@@ -370,7 +395,14 @@ Parece una lista de opciones, pero cada línea evita un problema:
 | `alwaysOnTop` + `'screen-saver'`                        | Quedar debajo de una app a pantalla completa.    |
 | `show: false` + `ready-to-show`                         | El parpadeo blanco al abrir.                     |
 | `setIgnoreMouseEvents(true, { forward: true })`         | Bloquear clics del trabajo real.                 |
+| `backgroundThrottling: false`                           | Que el VAD se congele con la ventana tapada.     |
 | `contextIsolation`, `nodeIntegration: false`, `sandbox` | Que el renderer toque Node.                      |
+
+Después de crearla, `lockPermissions(win)` deja la sesión en un solo permiso:
+`media`, y solo para esta ventana. Sin ese candado, el renderer podría pedir
+notificaciones, portapapeles o geolocalización sin que nadie lo revisara. Hacen
+falta los dos handlers (`setPermissionRequestHandler` y
+`setPermissionCheckHandler`): Chromium consulta el estado antes de pedir.
 
 La posición se calcula con `workArea`, no con `bounds`: `workArea` excluye la
 barra de tareas, así que la ventana no queda medio escondida debajo.
@@ -413,8 +445,9 @@ que tenga un `+` y, si falla el registro, informa el caso accionable: elige otra
 ### `config.ts` — los ajustes
 
 Un JSON en `app.getPath('userData')`. Simple a propósito. Y con una advertencia
-escrita en el propio archivo: **cuando lleguen las API keys, no van aquí en texto
-plano**. Van con `safeStorage.encryptString()` (DPAPI en Windows).
+escrita en el propio archivo: **las API keys no van aquí nunca**. Viven cifradas
+con `safeStorage` (DPAPI en Windows) en `userData/secrets/`, y el renderer no las
+recibe de vuelta (ver la sección 3).
 
 ---
 
@@ -456,10 +489,10 @@ plano**. Van con `safeStorage.encryptString()` (DPAPI en Windows).
 10. state = 'idle'           Milo vuelve a respirar
         │
         ▼
-9. setTimeout(4000)          SIMULADO no: tiempo real de lectura
+11. setTimeout(4000)         real: tiempo de lectura (BUBBLE_VISIBLE_MS)
         │
         ▼
-10. bubble-out (420ms)       la burbuja se desvanece y sale del DOM
+12. bubble-out (420ms)       la burbuja se desvanece y sale del DOM
 ```
 
 Ese es todo el sistema. La fase 3 reemplaza el paso 9: donde hoy la burbuja
@@ -484,7 +517,7 @@ usuario haciendo algo antes de hablar.
 | **OnPush**   | "No revises mi vista si no cambió nada".                     |
 | **CSP**      | Lista de qué puede cargar la página.                         |
 | **VAD**      | Detección de voz: saber cuándo hablas y cuándo callas.       |
-| **STT**      | Voz a texto (Whisper).                                       |
+| **STT**      | Voz a texto: el modelo que convierte audio en palabras.      |
 | **BYOK**     | "Trae tu propia clave": cada usuario configura la suya.      |
 | **DPAPI**    | El cifrado de Windows; lo que usa `safeStorage` por debajo.  |
 | **Hotspot**  | La zona cliqueable y arrastrable: el personaje y la burbuja. |
@@ -503,14 +536,14 @@ recorrer la frontera.
 
 2. **Añadir un estado nuevo.**
    Añade `'celebrating'` a `MascotState`, un bloque `.mascot[data-state='celebrating']`
-   en `mascot.scss` y dispara ese estado desde `app.ts`. Fíjate en cuántos
-   archivos tuviste que tocar: esa es la forma del contrato.
+   en `mascot.scss` y dispara ese estado desde `core/interaction/interaction.ts`.
+   Fíjate en cuántos archivos tuviste que tocar: esa es la forma del contrato.
 
 3. **Hacer que la burbuja dure más (o menos).**
-   Cambia `BUBBLE_VISIBLE_MS` en `app.ts` y, si tocas el desvanecido, cambia
-   también `BUBBLE_FADE_MS` y la animación `bubble-out` de `bubble.scss`. Esos
-   dos números son un contrato: si no coinciden, la burbuja desaparece del DOM a
-   mitad de la animación y se ve un salto.
+   Cambia `BUBBLE_VISIBLE_MS` en `core/interaction/interaction.ts` y, si tocas el
+   desvanecido, cambia también `BUBBLE_FADE_MS` y la animación `bubble-out` de
+   `bubble.scss`. Esos dos números son un contrato: si no coinciden, la burbuja
+   desaparece del DOM a mitad de la animación y se ve un salto.
 
 ---
 

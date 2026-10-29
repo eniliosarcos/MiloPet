@@ -11,7 +11,7 @@ decisiones están en `docs/ARQUITECTURA.md`.
 
 - La fase actual está en la última entrada de `HISTORIAL.md`. Compruébala; no la recuerdes.
 - No afirmes que algo funciona porque lo dice un documento: abre el archivo o ejecuta la comprobación.
-- Lo simulado se marca `SIMULADO` en el código y se dice en la respuesta. Hoy no existen micrófono ni cerebro.
+- Lo simulado se marca `SIMULADO` en el código y se dice en la respuesta. Hoy no existe el cerebro: la transcripción y el micrófono sí son reales.
 
 ## Límites de seguridad (no negociables)
 
