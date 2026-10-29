@@ -111,7 +111,7 @@ El reparto entre real y simulado, que es lo que hay que tener claro:
 - **`listening` ya es real.** Abre el micrófono, mide el ruido de fondo y espera
   a que el VAD decida. No dura 1,5 s: dura lo que dures hablando. Si no dices
   nada, a los 6 s vuelve a `idle` sin mensaje.
-- **`thinking` ya es real.** Dura lo que tarde Groq en transcribir. Ahí entrará
+- **`thinking` ya es real.** Dura lo que tarde Deepgram en transcribir. Ahí entrará
   el LLM en la fase 3.
 - **`acting` sigue simulado** con `ACTING_MS` y repite lo transcrito: el cerebro
   que responde llega en la fase 3.
@@ -123,12 +123,12 @@ nadie confunda la demo con la funcionalidad.
 
 Del micrófono al texto hay cuatro paradas, y cada una vive donde puede probarse:
 
-| Parada               | Dónde    | Qué hace                                                     |
-| -------------------- | -------- | ------------------------------------------------------------ |
-| `vad.ts`             | renderer | Máquina de tiempos: entra un nivel RMS, sale `open`/`close`. |
-| `capture.ts`         | renderer | `getUserMedia`, analizador para el VAD y PCM de la frase.    |
-| `ipc.ts`             | contrato | `transcribe({ pcm, sampleRate })` → `{ ok, text }`.          |
-| `stt/transcriber.ts` | main     | WAV y `fetch` multipart a Groq. La clave no sale de aquí.    |
+| Parada               | Dónde    | Qué hace                                                         |
+| -------------------- | -------- | ---------------------------------------------------------------- |
+| `vad.ts`             | renderer | Máquina de tiempos: entra un nivel RMS, sale `open`/`close`.     |
+| `capture.ts`         | renderer | `getUserMedia`, analizador para el VAD y PCM de la frase.        |
+| `ipc.ts`             | contrato | `transcribe({ pcm, sampleRate })` → `{ ok, text }`.              |
+| `stt/transcriber.ts` | main     | WAV y `fetch` a Deepgram en el cuerpo. La clave no sale de aquí. |
 
 `vad.ts` no sabe que existe un micrófono, así que se prueba con números en CI
 (`vad.spec.ts`), donde no hay dispositivo. `capture.ts` no decide nada: mide el
@@ -161,8 +161,8 @@ El recorrido de la clave, de la ventana al disco:
 1. El usuario pega la clave y pulsa Guardar.
 2. `setSttKey` la manda al main; el renderer no la vuelve a ver.
 3. El main la valida con `GET /models` antes de guardarla.
-4. `secrets.ts` la cifra con `safeStorage` en `userData/secrets/groq.bin`.
-5. `getSttStatus` solo responde `{ configured: true, provider: 'groq' }`.
+4. `secrets.ts` la cifra con `safeStorage` en `userData/secrets/deepgram.bin`.
+5. `getSttStatus` solo responde `{ configured: true, provider: 'deepgram' }`.
 
 Si el sistema no puede cifrar, no se guarda nada. Y si el archivo se cifró con
 otro perfil de usuario, se lee como "no hay clave", que es lo único accionable.
@@ -446,7 +446,7 @@ plano**. Van con `safeStorage.encryptString()` (DPAPI en Windows).
 7. core/interaction/         state = 'thinking' y manda el PCM al main
         │
         ▼
-8. electron/stt/             WAV + POST a Groq → texto (o un fallo clasificado)
+8. electron/stt/             WAV + POST a Deepgram → texto (o un fallo clasificado)
         │
         ▼
 9. state = 'acting'          la burbuja enseña lo que transcribió

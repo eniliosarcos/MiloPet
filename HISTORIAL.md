@@ -8,6 +8,14 @@ Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 
 ## Historial
 
+### 2026-10-29 — El proveedor de voz pasa a Deepgram por bloqueo regional · fix
+
+**Qué:** Groq respondía 403 en la consola y en la API desde esta red, así que la transcripción se movió a Deepgram: `POST /v1/listen` con el WAV en el cuerpo (no multipart), `model=nova-2`, `language=es`, `smart_format`. La clave se guarda como `deepgram`.
+**Por qué:** el 403 no era de la clave —OpenAI contesta lo mismo desde aquí con `unsupported_country_region_territory`— y el mapeo lo confundía con "clave no válida", mandando a revisar algo que estaba bien.
+**Tocó:** `electron/stt/transcriber.ts`, `electron/main.ts`, `src/shared/ipc.ts`, `core/stt/failure.ts`, `features/settings/`, tests y `docs/`.
+**Aprendido:** `/v1/models` de Deepgram es público y responde 200 sin token: la primera validación guardaba claves inventadas. La buena es `/v1/auth/token`. Un 403 merece un fallo propio (`blocked`) y no `auth`.
+**Commits:** `9dd8e6b`
+
 ### 2026-10-29 — Voz a texto con Groq y ajustes para la clave · feat
 
 **Qué:** `thinking` deja de ser un temporizador: el PCM de la frase viaja por IPC, el main lo convierte en WAV y lo manda a Groq (`whisper-large-v3-turbo`, `es`), y la burbuja enseña lo transcrito. Estrena la ventana de ajustes (`?settings=1`, otro componente raíz) para que cada usuario ponga su clave, cifrada con `safeStorage`.

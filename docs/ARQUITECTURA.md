@@ -57,7 +57,7 @@ métodos que `preload.ts` decidió publicar.
 | `electron/hotkey.ts`   | Registra el atajo global; informa si otro programa ya lo tiene.                  |
 | `electron/config.ts`   | Lee/escribe `config.json` en `app.getPath('userData')`.                          |
 | `electron/secrets.ts`  | Claves cifradas con `safeStorage`. Nunca en `config.json`.                       |
-| `electron/stt/`        | Voz a texto: interfaz `Transcriber` + implementación de Groq.                    |
+| `electron/stt/`        | Voz a texto: interfaz `Transcriber` + implementación de Deepgram.                |
 | `electron/preload.ts`  | Puente. Traduce métodos del `MiloBridge` a mensajes IPC concretos.               |
 
 ### Contrato compartido
@@ -280,7 +280,7 @@ false` por el mismo motivo.
 **10. La clave de voz la pone cada usuario, no la app.**
 Una clave metida en el instalador la puede sacar cualquiera que descomprima el
 binario, y entonces una persona paga las frases de todo el mundo. Milo es BYOK:
-cada usuario crea su clave en la consola de Groq (gratis) y la pega en la primera
+cada usuario crea su clave en la consola de su proveedor y la pega en la primera
 pantalla de ajustes del proyecto. Se cifra con `safeStorage` en
 `userData/secrets/` y el renderer nunca la recibe de vuelta: solo sabe si está
 puesta.
@@ -290,16 +290,28 @@ correspondiente en la burbuja. La alternativa era un backend propio que pagase
 las llamadas: factura, cuotas y abuso incluidos. Queda descartado mientras Milo
 sea un proyecto personal.
 
-`setSttKey` valida contra la API antes de guardar (`GET /models`): una clave mal
-pegada se descubre en ese momento y no a la tercera frase. Y si el sistema no
-puede cifrar, no se guarda nada: un archivo en claro es peor que volver a
-pedirla.
+`setSttKey` valida contra la API antes de guardar (`GET /v1/auth/token`): una
+clave mal pegada se descubre en ese momento y no a la tercera frase. Y si el
+sistema no puede cifrar, no se guarda nada: un archivo en claro es peor que
+volver a pedirla.
+
+El proveedor no es una decisión para siempre, y esta ronda lo demostró: el
+primero era Groq, y desde esta red responde **403** en la consola y en la API
+(OpenAI contesta lo mismo con más palabras: `unsupported_country_region_territory`).
+Ese 403 no dice "clave mal", dice "tu red no entra". Por eso hay un fallo
+`blocked` separado de `auth`: confundirlos manda al usuario a revisar una clave
+que está bien. Se cambió a Deepgram, que sí es alcanzable desde aquí y da 200 $
+de crédito al registrarse.
+
+Cuidado con el endpoint de validación: `/v1/models` de Deepgram es **público** y
+responde 200 sin token. Se usó primero y una clave inventada se guardaba como
+buena; el fallo aparecía en la primera frase. `/v1/auth/token` sí es autenticado.
 
 ## Qué está simulado (no confundir con real)
 
 | Parece               | Realidad                                                                        |
 | -------------------- | ------------------------------------------------------------------------------- |
-| Milo "escucha"       | Real: `getUserMedia` + VAD + Groq. El audio de la frase sale a Groq, nada más.  |
+| Milo "escucha"       | Real: `getUserMedia` + VAD + Deepgram. El audio de la frase sale a Deepgram.    |
 | Milo "piensa"        | No hay LLM. `thinking` es la latencia real de la transcripción.                 |
 | Milo "responde"      | Repite lo transcrito. La respuesta del cerebro llega en la fase 3.              |
 | La clave de voz      | Real: cifrada con `safeStorage` en `userData/secrets/`, nunca en `config.json`. |
