@@ -8,6 +8,14 @@ Al pasar de 350 líneas, las entradas antiguas se archivan en `docs/historial/`.
 
 ## Historial
 
+### 2026-10-29 — La mirada crece al acercar el cursor · fix
+
+**Qué:** La deflexión de los ojos ahora crece con la cercanía del cursor (8,3 px en el borde, 10,6 px encima) y se queda al tope dentro del radio muerto entre los dos ojos.
+**Por qué:** en la ventana real, acercar el cursor al centro de la cara encogía la mirada hasta cero: la curva escalaba con la distancia.
+**Tocó:** `src/app/features/mascot/gaze.ts`, `src/app/features/mascot/mascot.ts`, tests de la mirada.
+**Aprendido:** normalizar la dirección sin una magnitud de cercanía apaga la mirada justo cuando el cursor está encima; y entre los ojos la dirección es inestable, así que ahí se conserva la última en vez de recalcular.
+**Commits:** `a1305d1`
+
 ### 2026-10-29 — La mirada sigue al cursor · feat
 
 **Qué:** Mientras el cursor está dentro de la ventana, los ojos se inclinan hacia él y el barrido automático se apaga; al salir vuelven a barrer solos.
