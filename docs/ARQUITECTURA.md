@@ -49,13 +49,13 @@ métodos que `preload.ts` decidió publicar.
 
 ### Proceso main (privilegiado)
 
-| Archivo               | Responsabilidad                                                         |
-| --------------------- | ----------------------------------------------------------------------- |
-| `electron/main.ts`    | Ciclo de vida, instancia única, registro de handlers IPC.               |
-| `electron/window.ts`  | Crea la ventana; posición, transparencia, always-on-top, click-through. |
-| `electron/hotkey.ts`  | Registra el atajo global; informa si otro programa ya lo tiene.         |
-| `electron/config.ts`  | Lee/escribe `config.json` en `app.getPath('userData')`.                 |
-| `electron/preload.ts` | Puente. Traduce métodos del `MiloBridge` a mensajes IPC concretos.      |
+| Archivo               | Responsabilidad                                                                  |
+| --------------------- | -------------------------------------------------------------------------------- |
+| `electron/main.ts`    | Ciclo de vida, instancia única, registro de handlers IPC.                        |
+| `electron/window.ts`  | Crea la ventana; posición guardada, transparencia, always-on-top, click-through. |
+| `electron/hotkey.ts`  | Registra el atajo global; informa si otro programa ya lo tiene.                  |
+| `electron/config.ts`  | Lee/escribe `config.json` en `app.getPath('userData')`.                          |
+| `electron/preload.ts` | Puente. Traduce métodos del `MiloBridge` a mensajes IPC concretos.               |
 
 ### Contrato compartido
 
@@ -72,7 +72,7 @@ métodos que `preload.ts` decidió publicar.
 | `src/app/features/mascot/`         | El cuerpo: SVG + estados + animaciones.                                         |
 | `src/app/features/bubble/`         | La burbuja de texto.                                                            |
 
-## Las cinco decisiones que no son obvias
+## Las seis decisiones que no son obvias
 
 Cada una existe por un bug concreto que ya nos costó tiempo.
 
@@ -108,14 +108,30 @@ diseño es **pulsar una vez para empezar** y que pare solo, mediante detección 
 silencio (VAD) en la fase 2. Si intentas implementar push-to-talk clásico,
 terminarás metiendo un hook de teclado nativo y builds frágiles.
 
+**6. Arrastrar con la región nativa y guardar solo al soltar.**
+`.hotspot__grip` usa `app-region: drag`, que resuelve el sistema operativo: no hay
+handler de `mousedown` ni canal IPC nuevo. La contrapartida es que una región de
+arrastre **ignora todos los eventos de puntero**, y de ahí el anillo exterior de
+12 px que mantiene vivo el `mousemove` que desbloquea los clics.
+
+La posición se guarda en `config.json` desde `moved`, que se emite una vez al
+soltar (guardar en cada `move` escribiría el disco decenas de veces por segundo).
+Se descartó `windowStatePersistence` de Electron 45: está marcada como
+experimental y no cubre el caso que duele, que es desconectar el monitor donde
+estaba Milo. Con `skipTaskbar: true`, una ventana fuera de pantalla no se puede
+recuperar, así que `initialPosition()` exige que al menos `MIN_VISIBLE` (80 px)
+caigan dentro de algún monitor y, si no, vuelve a la esquina inferior derecha.
+
 ## Qué está simulado (no confundir con real)
 
-| Parece               | Realidad                                               |
-| -------------------- | ------------------------------------------------------ |
-| Milo "escucha"       | `setTimeout(1500)` en `app.ts`. No hay `getUserMedia`. |
-| Milo "piensa"        | Otro `setTimeout(900)`. No hay LLM.                    |
-| Milo "responde"      | Texto fijo en el código.                               |
-| Ajustes persistentes | Sí es real: `config.json` en `userData`.               |
+| Parece               | Realidad                                                       |
+| -------------------- | -------------------------------------------------------------- |
+| Milo "escucha"       | `setTimeout(1500)` en `app.ts`. No hay `getUserMedia`.         |
+| Milo "piensa"        | Otro `setTimeout(900)`. No hay LLM.                            |
+| Milo "responde"      | Texto fijo en el código.                                       |
+| Ajustes persistentes | Sí es real: `config.json` en `userData`.                       |
+| Milo se arrastra     | Sí es real: lo mueve el sistema operativo, no JS.              |
+| Milo recuerda dónde  | Sí es real: `position` en `config.json`, validada al arrancar. |
 
 ## Cómo verificar que sigue vivo
 
@@ -138,6 +154,8 @@ npm run dev:web      # solo Chrome, para pulir el personaje
 | Añadir una operación privilegiada         | `src/shared/ipc.ts` → `preload.ts` → handler en `main.ts` |
 | Mover o redimensionar la ventana          | `electron/window.ts`                                      |
 | Cambiar el tamaño del área cliqueable     | `.hotspot` en `src/app/app.scss`                          |
+| Cambiar el agarre para arrastrar          | `.hotspot__grip` en `src/app/app.scss`                    |
+| Cuándo se descarta una posición guardada  | `MIN_VISIBLE` en `electron/window.ts`                     |
 | Cambiar el estilo de la burbuja           | `features/bubble/bubble.scss`                             |
 | Cuánto dura el mensaje en pantalla        | `BUBBLE_VISIBLE_MS` en `src/app/app.ts`                   |
 

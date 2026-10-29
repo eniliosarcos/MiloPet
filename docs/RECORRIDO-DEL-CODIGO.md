@@ -122,6 +122,13 @@ porque `mousemove` dispara decenas de eventos por segundo.
 Hoy esas zonas son dos: `.hotspot` (el personaje) y `.bubble-wrap` (para que
 funcione la (x)). La segunda existe solo mientras hay un mensaje en pantalla.
 
+Ese mismo `mousemove` es el que permite arrastrar: la ventana tiene que ser
+interactiva **antes** de que pulses el botón, porque mientras es click-through el
+sistema manda el clic al programa de detrás. Y aquí hay una trampa: una región
+`app-region: drag` ignora todos los eventos de puntero, así que si cubriera el
+hotspot entero, el aviso que desbloquea los clics dejaría de llegar. Por eso el
+agarre está metido 12 px: el anillo exterior mantiene la cadena viva.
+
 ---
 
 ## 4. El escenario: `src/app/app.html` y `src/app/app.scss`
@@ -133,10 +140,17 @@ Tres capas, en orden:
    personaje (la burbuja trae la suya, para la (x)).
 3. `app-mascot` — el personaje, abajo.
 
+Dentro del hotspot vive `.hotspot__grip`, la franja que **arrastra la ventana**.
+Está metida 12 px a propósito: el sistema operativo resuelve el arrastre y, a
+cambio, esa zona deja de emitir eventos de puntero. El anillo exterior sobra para
+que `elementFromPoint` siga viendo el hotspot y la ventana acepte clics.
+
 El detalle que confunde al principio: `pointer-events: none` está en el
 componente del personaje y `.hotspot` lo reactiva con `pointer-events: auto`. Si
 alguna vez "Milo no responde al ratón", revisa esos dos valores antes que
-cualquier otra cosa.
+cualquier otra cosa. Y si "no se deja arrastrar", comprueba que el agarre sigue
+dentro del hotspot: sin `data-interactive` alrededor, la ventana nunca se vuelve
+interactiva y el clic se va al programa de detrás.
 
 `data-state` en el `<main>` es solo informativo (los tests lo usan para
 comprobar la máquina de estados). La animación real la dispara el `data-state`
@@ -271,6 +285,26 @@ Parece una lista de opciones, pero cada línea evita un problema:
 
 La posición se calcula con `workArea`, no con `bounds`: `workArea` excluye la
 barra de tareas, así que la ventana no queda medio escondida debajo.
+
+Y no siempre arranca en la esquina: `initialPosition()` lee la última posición de
+`config.json` y comprueba que al menos `MIN_VISIBLE` (80 px) caigan dentro de algún
+monitor. Esa validación existe porque la ventana lleva `skipTaskbar: true` y un
+Milo restaurado fuera de pantalla no se puede recuperar: no hay dónde hacer clic.
+Cuándo se guarda esa posición se explica abajo, en `moved`.
+
+### `moved` — guardar dónde lo soltaste
+
+```ts
+win.on('moved', () => {
+  const { x, y } = win.getBounds();
+  writeConfig({ position: { x, y } });
+});
+```
+
+`moved` llega **una sola vez, al soltar** el arrastre (en Windows y macOS; en
+Linux el evento es `move` y llega en cada paso). No hay canal IPC: el renderer no
+sabe que la ventana se movió y no le hace falta. Guardar en cada `move` habría
+escrito el disco decenas de veces por segundo.
 
 ### `hotkey.ts` — el atajo
 
