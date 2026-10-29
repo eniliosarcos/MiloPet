@@ -34,6 +34,9 @@ jobs:
       - name: Formato
         run: npm run format:check
 
+      - name: Historial
+        run: npm run history:check
+
       - name: Tests
         run: npm run test:ci
 

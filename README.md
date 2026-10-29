@@ -61,17 +61,20 @@ navegador, así que `Ctrl+Shift+Space` sigue moviendo la máquina de estados.
 
 ## Scripts
 
-| Comando             | Qué hace                                                 |
-| ------------------- | -------------------------------------------------------- |
-| `npm run dev`       | Angular + Electron con recarga en caliente.              |
-| `npm run dev:web`   | Solo Angular en Chrome.                                  |
-| `npm run build`     | Compila Electron a `dist-electron/` y Angular a `dist/`. |
-| `npm run preview`   | Compila y abre la ventana de producción real.            |
-| `npm run package`   | Genera el instalador NSIS en `release/`.                 |
-| `npm run lint`      | ESLint sobre renderer y proceso main.                    |
-| `npm run test`      | Tests unitarios (Vitest).                                |
-| `npm run typecheck` | Type-check de Electron + build del renderer.             |
-| `npm run format`    | Prettier sobre todo el proyecto.                         |
+| Comando                 | Qué hace                                                  |
+| ----------------------- | --------------------------------------------------------- |
+| `npm run dev`           | Angular + Electron con recarga en caliente.               |
+| `npm run dev:web`       | Solo Angular en Chrome.                                   |
+| `npm run dev:debug`     | Electron con el puerto de depuración 9222 abierto.        |
+| `npm run build`         | Compila Electron a `dist-electron/` y Angular a `dist/`.  |
+| `npm run preview`       | Compila y abre la ventana de producción real.             |
+| `npm run package`       | Genera el instalador NSIS en `release/`.                  |
+| `npm run lint`          | ESLint sobre renderer y proceso main.                     |
+| `npm run test`          | Tests unitarios (Vitest).                                 |
+| `npm run typecheck`     | Type-check de Electron + build del renderer.              |
+| `npm run format`        | Prettier sobre todo el proyecto.                          |
+| `npm run verify`        | Lint + formato + tests + build. Lo mismo que corre la CI. |
+| `npm run history:check` | Verifica que `HISTORIAL.md` no crezca más de la cuenta.   |
 
 ## Estructura
 
@@ -80,7 +83,9 @@ electron/          proceso main: ventana, atajo global, IPC, ajustes
 src/shared/        contrato main ↔ renderer (tipos + canales)
 src/app/core/      token MILO + sustituto para navegador
 src/app/features/  mascota (SVG) y burbuja de texto
-docs/              arquitectura
+.opencode/skills/  skills del repo: milo-ipc y milo-verify
+scripts/           comprobaciones de CI (historial)
+docs/              arquitectura y recorrido del código
 ```
 
 ## Convenciones
@@ -89,6 +94,8 @@ docs/              arquitectura
   (`feat:`, `fix:`, `chore:`…). Hay un hook que los valida.
 - **Formato:** Prettier al guardar (config incluida en `.vscode/settings.json`).
 - **Líneas:** LF en todo el repo (`.gitattributes`), aunque estés en Windows.
+- **Agentes:** las reglas están en [`AGENTS.md`](AGENTS.md). Se abren desde la
+  raíz del repositorio para que OpenCode cargue las skills.
 
 ## Reglas que no se negocian
 
